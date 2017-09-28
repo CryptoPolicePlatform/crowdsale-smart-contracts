@@ -11,6 +11,18 @@ contract CryptoPoliceOfficerToken {
     mapping(address => uint) balances;
     mapping(address => mapping (address => uint)) allowances;
     
+    event Transfer(
+        address indexed fromAccount,
+        address indexed destination,
+        uint amount
+    );
+    
+    event Approval(
+        address indexed fromAccount,
+        address indexed destination,
+        uint amount
+    );
+    
     function CryptoPoliceOfficerToken(
         string tokenName,
         string tokenSymbol,
@@ -23,9 +35,6 @@ contract CryptoPoliceOfficerToken {
         totalSupply = tokenTotalSupply;
         balances[msg.sender] = tokenTotalSupply;
     }
-    
-    event Transfer(address indexed _from, address indexed _to, uint _value);
-    event Approval(address indexed _owner, address indexed _spender, uint _value);
 
     function totalSupply() public constant returns (uint) {
         return totalSupply;
@@ -51,20 +60,20 @@ contract CryptoPoliceOfficerToken {
     }
     
     function transferFrom(
-        address account,
+        address source,
         address destination,
         uint amount
     ) public returns (bool) {
         if (
             amount > 0
-            && balances[account] >= amount
-            && allowances[account][msg.sender] >= amount
+            && balances[source] >= amount
+            && allowances[source][msg.sender] >= amount
             && balances[destination] + amount > balances[destination]
         ) {
-            balances[account] -= amount;
-            allowances[account][msg.sender] -= amount;
+            balances[source] -= amount;
+            allowances[source][msg.sender] -= amount;
             balances[destination] += amount;
-            Transfer(account, destination, amount);
+            Transfer(source, destination, amount);
             
             return true;
         }
@@ -72,14 +81,28 @@ contract CryptoPoliceOfficerToken {
         return false;
     }
     
-    function approve(address trustee, uint amount) public returns (bool) {
-        allowances[msg.sender][trustee] = amount;
-        Approval(msg.sender, trustee, amount);
+    /**
+     * Allow destination address to withdraw funds from account that is caller
+     * of this function
+     *
+     * @param destination The one who receives permission
+     * @param amount How much funds can be withdrawn
+     * @return Whether or not approval was successful
+     */
+    function approve(
+        address destination,
+        uint amount
+    ) public returns (bool) {
+        allowances[msg.sender][destination] = amount;
+        Approval(msg.sender, destination, amount);
         
         return true;
     }
     
-    function allowance(address origin, address trustee) public constant returns (uint) {
-        return allowances[origin][trustee];
+    function allowance(
+        address fromAccount,
+        address destination
+    ) public constant returns (uint) {
+        return allowances[fromAccount][destination];
     }
 }
