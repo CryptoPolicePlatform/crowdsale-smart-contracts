@@ -37,7 +37,10 @@ contract CryptoPoliceCrowdsale is Ownable {
      * Exchange tokens for weis received
      */
     function () public payable {
+        require(state == CrowdsaleState.Started);
+
         uint tokenAmount = 123; // TODO
+        
         if (token.transfer(msg.sender, tokenAmount)) {
             weiSpent[msg.sender] = weiSpent[msg.sender].add(msg.value);
         } else {
