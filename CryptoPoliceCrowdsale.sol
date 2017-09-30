@@ -15,6 +15,16 @@ contract CryptoPoliceCrowdsale is Ownable {
     }
     
     /**
+     * Minimum goal for this crowdsale of 1700 ether
+     */
+    uint public constant MIN_GOAL = 1700000000000000000000;
+
+    /**
+     * Amount of wei raised in this crowdsale
+     */
+    uint public fundsRaised = 0;
+
+    /**
      * Token that will be sold
      */
     Token public token;
@@ -38,10 +48,12 @@ contract CryptoPoliceCrowdsale is Ownable {
      */
     function () public payable {
         require(state == CrowdsaleState.Started);
+        // TODO: Require min value for sale
 
         uint tokenAmount = 123; // TODO
-        
+
         if (token.transfer(msg.sender, tokenAmount)) {
+            fundsRaised = fundsRaised.add(msg.value);
             weiSpent[msg.sender] = weiSpent[msg.sender].add(msg.value);
         } else {
             revert();
@@ -54,5 +66,29 @@ contract CryptoPoliceCrowdsale is Ownable {
     function start() public owned {
         require(state == CrowdsaleState.Pending);
         state = CrowdsaleState.Started;
+    }
+
+    function end() public owned {
+        require(state == CrowdsaleState.Started);
+
+        state = CrowdsaleState.Ended;
+
+        if (fundsRaised >= MIN_GOAL) {
+            owner.transfer(fundsRaised);
+        }
+    }
+
+    /**
+     * Allow crowdsale participant to get refunded
+     */
+    function refund() public {
+        require(fundsRaised < MIN_GOAL);
+        require(weiSpent[msg.sender] > 0);
+        require(state == CrowdsaleState.Ended);
+        
+        uint amount = weiSpent[msg.sender];
+        weiSpent[msg.sender] = 0;
+
+        msg.sender.transfer(amount);
     }
 }
