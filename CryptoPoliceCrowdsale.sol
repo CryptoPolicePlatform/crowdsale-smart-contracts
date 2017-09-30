@@ -82,9 +82,9 @@ contract CryptoPoliceCrowdsale is Ownable {
      * Allow crowdsale participant to get refunded
      */
     function refund() public {
-        require(fundsRaised < MIN_GOAL);
-        require(weiSpent[msg.sender] > 0);
         require(state == CrowdsaleState.Ended);
+        require(weiSpent[msg.sender] > 0);
+        require(fundsRaised < MIN_GOAL);
         
         uint amount = weiSpent[msg.sender];
         weiSpent[msg.sender] = 0;
