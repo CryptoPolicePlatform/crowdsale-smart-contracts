@@ -9,4 +9,14 @@ library MathUtils {
 
         return result;
     }
+
+    function sub(uint a, uint b) internal constant returns (uint) {
+        // TODO: Check for owerflows
+        return a - b;
+    }
+
+    function mul(uint a, uint b) internal constant returns (uint) {
+        // TODO: Check for owerflows
+        return a * b;
+    }
 }

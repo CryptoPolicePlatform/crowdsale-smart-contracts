@@ -3,8 +3,10 @@ pragma solidity ^0.4.15;
 import "MathUtils.sol";
 import "Ownable.sol";
 
-interface Token {
+interface CrowdsaleToken {
     function transfer(address destination, uint amount) public returns (bool);
+    function totalSupply() public constant returns (uint);
+    function balanceOf(address account) public constant returns (uint);
 }
 
 contract CryptoPoliceCrowdsale is Ownable {
@@ -13,34 +15,55 @@ contract CryptoPoliceCrowdsale is Ownable {
     enum CrowdsaleState {
         Pending, Started, Ended
     }
+
+    enum CrowdsaleStage {
+        ClosedPreSale, PublicPreSale, Sale, LastChance
+    }
     
     /**
-     * Minimum goal for this crowdsale of 1700 ether
+     * Minimum goal for this crowdsale
      */
-    uint public constant MIN_GOAL = 1700000000000000000000;
+    uint public constant MIN_GOAL = 1700 ether;
 
     /**
-     * Amount of wei raised in this crowdsale
+     * Minimum number of wei that can be exchanged for tokens
      */
-    uint public fundsRaised = 0;
+    uint public constant MIN_SALE = 0.01 ether;
+
+    /**
+     * Number of tokens that can be purchased
+     */
+    uint internal remaining;
+    
+    /**
+     * Number of wei that has been gathered in sales so far
+     */
+    uint internal weiRaised = 0;
 
     /**
      * Token that will be sold
      */
-    Token public token;
+    CrowdsaleToken public token;
     
     /**
      * State in which the crowdsale is in
      */
     CrowdsaleState public state = CrowdsaleState.Pending;
     
+    CrowdsaleStage public stage = CrowdsaleStage.ClosedPreSale;
+
     /**
      * Amount of wei each participant has spent in crowdsale
      */
     mapping(address => uint) public weiSpent;
     
-    function CryptoPoliceCrowdsale(address cryptoPoliceToken) public {
-        token = Token(cryptoPoliceToken);
+    function CryptoPoliceCrowdsale(address crowdsaleToken, uint crowdsaleTokenVolume) public {
+        token = CrowdsaleToken(crowdsaleToken);
+        remaining = crowdsaleTokenVolume;
+        // number of tokens required for this crowdsale operation
+        // including purchaseable tokens, bounty tokens etc.
+        uint allocation = crowdsaleTokenVolume;
+        require(token.balanceOf(address(this)) == allocation);
     }
     
     /**
@@ -48,16 +71,31 @@ contract CryptoPoliceCrowdsale is Ownable {
      */
     function () public payable {
         require(state == CrowdsaleState.Started);
-        // TODO: Require min value for sale
+        require(msg.value >= MIN_SALE);
+        require(remaining > 0);
 
-        uint tokenAmount = 123; // TODO
+        uint spendableAmount = msg.value;
+        var (tokens, weis) = exchange();
 
-        if (token.transfer(msg.sender, tokenAmount)) {
-            fundsRaised = fundsRaised.add(msg.value);
-            weiSpent[msg.sender] = weiSpent[msg.sender].add(msg.value);
-        } else {
-            revert();
+        uint tokenAmount = spendableAmount / weis * tokens;
+
+        // when we try to buy more than there is available
+        if (tokenAmount > remaining) {
+            tokenAmount = remaining / tokens;
+            spendableAmount = tokenAmount * weis;
+
+            uint refundable = msg.value - spendableAmount;
+            
+            if (refundable > 0) {
+                msg.sender.transfer(msg.value - refundable);
+            }
         }
+
+        require(token.transfer(msg.sender, tokenAmount));
+
+        weiRaised = weiRaised.add(spendableAmount);
+        remaining = remaining.sub(tokenAmount);
+        weiSpent[msg.sender] = weiSpent[msg.sender].add(spendableAmount);
     }
 
     /**
@@ -68,13 +106,16 @@ contract CryptoPoliceCrowdsale is Ownable {
         state = CrowdsaleState.Started;
     }
 
+    /**
+     * Command for owner to end crowdsale
+     */
     function end() public owned {
         require(state == CrowdsaleState.Started);
 
         state = CrowdsaleState.Ended;
 
-        if (fundsRaised >= MIN_GOAL) {
-            owner.transfer(fundsRaised);
+        if (weiRaised >= MIN_GOAL) {
+            owner.transfer(weiRaised);
         }
     }
 
@@ -84,11 +125,31 @@ contract CryptoPoliceCrowdsale is Ownable {
     function refund() public {
         require(state == CrowdsaleState.Ended);
         require(weiSpent[msg.sender] > 0);
-        require(fundsRaised < MIN_GOAL);
+        require(weiRaised < MIN_GOAL);
         
-        uint amount = weiSpent[msg.sender];
+        uint refundableAmount = weiSpent[msg.sender];
         weiSpent[msg.sender] = 0;
 
-        msg.sender.transfer(amount);
+        msg.sender.transfer(refundableAmount);
+    }
+
+    function exchange() internal returns (uint tokens, uint weis) {
+        tokens = 100000;
+
+        if (stage == CrowdsaleStage.ClosedPreSale) {
+            weis = 13;
+        } else if (stage == CrowdsaleStage.PublicPreSale) {
+            weis = 16;
+        } else if (stage == CrowdsaleStage.Sale) {
+            weis = 20;
+        } else if (stage == CrowdsaleStage.LastChance) {
+            weis = 25;
+        } else {
+            assert(false);
+        }
+
+        assert(tokens > 0);
+        assert(weis > 0);
+        assert(MIN_SALE >= weis);
     }
 }

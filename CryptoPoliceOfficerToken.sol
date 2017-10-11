@@ -4,7 +4,7 @@ pragma solidity ^0.4.15;
 contract CryptoPoliceOfficerToken {
     string public name;
     string public symbol;
-    uint8 public decimals;
+    uint8 public decimals = 8;
     
     uint256 public totalSupply;
     
@@ -26,12 +26,10 @@ contract CryptoPoliceOfficerToken {
     function CryptoPoliceOfficerToken(
         string tokenName,
         string tokenSymbol,
-        uint8 tokenDecimals,
         uint tokenTotalSupply
     ) public {
         name = tokenName;
         symbol = tokenSymbol;
-        decimals = tokenDecimals;
         totalSupply = tokenTotalSupply;
         balances[msg.sender] = tokenTotalSupply;
     }
