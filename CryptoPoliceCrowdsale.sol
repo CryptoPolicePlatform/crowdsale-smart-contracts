@@ -87,7 +87,7 @@ contract CryptoPoliceCrowdsale is Ownable {
             uint refundable = msg.value - spendableAmount;
             
             if (refundable > 0) {
-                msg.sender.transfer(msg.value - refundable);
+                msg.sender.transfer(refundable);
             }
         }
 
