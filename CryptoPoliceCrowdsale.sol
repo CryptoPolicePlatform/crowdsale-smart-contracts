@@ -74,9 +74,11 @@ contract CryptoPoliceCrowdsale is Ownable {
         require(msg.value >= MIN_SALE);
         require(remaining > 0);
 
-        uint spendableAmount = msg.value;
         var (tokens, weis) = exchange();
 
+        require(remaining > tokens);
+
+        uint spendableAmount = msg.value;
         uint tokenAmount = spendableAmount / weis * tokens;
 
         // when we try to buy more than there is available
