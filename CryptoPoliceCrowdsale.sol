@@ -33,7 +33,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     /**
      * Number of tokens that can be purchased
      */
-    uint internal remaining;
+    uint internal remainingCrowdsaleTokens;
     
     /**
      * Number of wei that has been gathered in sales so far
@@ -57,33 +57,24 @@ contract CryptoPoliceCrowdsale is Ownable {
      */
     mapping(address => uint) public weiSpent;
     
-    function CryptoPoliceCrowdsale(address crowdsaleToken, uint crowdsaleTokenVolume) public {
-        token = CrowdsaleToken(crowdsaleToken);
-        remaining = crowdsaleTokenVolume;
-        // number of tokens required for this crowdsale operation
-        // including purchaseable tokens, bounty tokens etc.
-        uint allocation = crowdsaleTokenVolume;
-        require(token.balanceOf(address(this)) == allocation);
-    }
-    
     /**
      * Exchange tokens for weis received
      */
     function () public payable {
         require(state == CrowdsaleState.Started);
         require(msg.value >= MIN_SALE);
-        require(remaining > 0);
+        require(remainingCrowdsaleTokens > 0);
 
         var (tokens, weis) = exchange();
 
-        require(remaining > tokens);
+        require(remainingCrowdsaleTokens > tokens);
 
         uint spendableAmount = msg.value;
         uint tokenAmount = spendableAmount / weis * tokens;
 
         // when we try to buy more than there is available
-        if (tokenAmount > remaining) {
-            tokenAmount = remaining / tokens;
+        if (tokenAmount > remainingCrowdsaleTokens) {
+            tokenAmount = remainingCrowdsaleTokens / tokens;
             spendableAmount = tokenAmount * weis;
 
             uint refundable = msg.value - spendableAmount;
@@ -96,15 +87,21 @@ contract CryptoPoliceCrowdsale is Ownable {
         require(token.transfer(msg.sender, tokenAmount));
 
         weiRaised = weiRaised.add(spendableAmount);
-        remaining = remaining.sub(tokenAmount);
+        remainingCrowdsaleTokens = remainingCrowdsaleTokens.sub(tokenAmount);
         weiSpent[msg.sender] = weiSpent[msg.sender].add(spendableAmount);
     }
 
     /**
      * Command for owner to start crowdsale
      */
-    function start() public owned {
+    function start(address crowdsaleToken, uint crowdsaleTokenVolume) public owned {
         require(state == CrowdsaleState.Pending);
+        token = CrowdsaleToken(crowdsaleToken);
+        remainingCrowdsaleTokens = crowdsaleTokenVolume;
+        // number of tokens required for this crowdsale operation
+        // including purchaseable tokens, bounty tokens etc.
+        uint allocation = remainingCrowdsaleTokens;
+        require(token.balanceOf(address(this)) == allocation);
         state = CrowdsaleState.Started;
     }
 
@@ -123,7 +120,7 @@ contract CryptoPoliceCrowdsale is Ownable {
      */
     function end() public owned {
         require(state == CrowdsaleState.Started);
-
+        
         state = CrowdsaleState.Ended;
 
         if (weiRaised >= MIN_GOAL) {
