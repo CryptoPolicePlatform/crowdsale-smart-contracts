@@ -35,7 +35,11 @@ contract CryptoPoliceCrowdsale is Ownable {
      */
     uint internal remainingCrowdsaleTokens;
 
-    uint internal softCapFromRemaining;
+    /**
+     * When number of remaining crowdsale tokens reaches this number then
+     * soft cap has been reached
+     */
+    uint internal softCapTreshold;
     
     /**
      * Number of wei that has been gathered in sales so far
@@ -89,7 +93,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         weiSpent[msg.sender] = weiSpent[msg.sender].add(spendableAmount);
         weiRaised = weiRaised.add(spendableAmount);
         
-        if (softCapFromRemaining >= remainingCrowdsaleTokens) {
+        if (softCapTreshold >= remainingCrowdsaleTokens) {
             stage = CrowdsaleStage.LastChance;
         }
 
@@ -102,7 +106,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     function start(address crowdsaleToken, uint crowdsaleTokenVolume, uint softCap) public owned {
         require(state == CrowdsaleState.Pending);
         token = CrowdsaleToken(crowdsaleToken);
-        softCapFromRemaining = crowdsaleTokenVolume - softCap;
+        softCapTreshold = crowdsaleTokenVolume - softCap;
         remainingCrowdsaleTokens = crowdsaleTokenVolume;
         // number of tokens required for this crowdsale operation
         // including purchaseable tokens, bounty tokens etc.
