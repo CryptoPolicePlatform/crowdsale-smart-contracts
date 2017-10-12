@@ -34,6 +34,8 @@ contract CryptoPoliceCrowdsale is Ownable {
      * Number of tokens that can be purchased
      */
     uint internal remainingCrowdsaleTokens;
+
+    uint internal softCapFromRemaining;
     
     /**
      * Number of wei that has been gathered in sales so far
@@ -84,19 +86,23 @@ contract CryptoPoliceCrowdsale is Ownable {
         }
         
         remainingCrowdsaleTokens = remainingCrowdsaleTokens.sub(tokenAmount);
-        
-        require(token.transfer(msg.sender, tokenAmount));
-
-        weiRaised = weiRaised.add(spendableAmount);
         weiSpent[msg.sender] = weiSpent[msg.sender].add(spendableAmount);
+        weiRaised = weiRaised.add(spendableAmount);
+        
+        if (softCapFromRemaining >= remainingCrowdsaleTokens) {
+            stage = CrowdsaleStage.LastChance;
+        }
+
+        require(token.transfer(msg.sender, tokenAmount));
     }
 
     /**
      * Command for owner to start crowdsale
      */
-    function start(address crowdsaleToken, uint crowdsaleTokenVolume) public owned {
+    function start(address crowdsaleToken, uint crowdsaleTokenVolume, uint softCap) public owned {
         require(state == CrowdsaleState.Pending);
         token = CrowdsaleToken(crowdsaleToken);
+        softCapFromRemaining = crowdsaleTokenVolume - softCap;
         remainingCrowdsaleTokens = crowdsaleTokenVolume;
         // number of tokens required for this crowdsale operation
         // including purchaseable tokens, bounty tokens etc.
@@ -136,6 +142,11 @@ contract CryptoPoliceCrowdsale is Ownable {
     function startSale() public owned {
         require(stage == CrowdsaleStage.PublicPreSale);
         stage = CrowdsaleStage.Sale;
+    }
+
+    function startLastChance() public owned {
+        require(stage == CrowdsaleStage.Sale);
+        stage = CrowdsaleStage.LastChance;
     }
 
     /**
