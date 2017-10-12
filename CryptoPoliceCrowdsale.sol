@@ -13,7 +13,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     using MathUtils for uint;
 
     enum CrowdsaleState {
-        Pending, Started, Ended
+        Pending, Started, Ended, Paused
     }
 
     enum CrowdsaleStage {
@@ -106,6 +106,16 @@ contract CryptoPoliceCrowdsale is Ownable {
         state = CrowdsaleState.Started;
     }
 
+    function pause() public owned {
+        require(state == CrowdsaleState.Started);
+        state = CrowdsaleState.Paused;
+    }
+
+    function unPause() public owned {
+        require(state == CrowdsaleState.Paused);
+        state = CrowdsaleState.Started;
+    }
+
     /**
      * Command for owner to end crowdsale
      */
@@ -117,6 +127,16 @@ contract CryptoPoliceCrowdsale is Ownable {
         if (weiRaised >= MIN_GOAL) {
             owner.transfer(weiRaised);
         }
+    }
+
+    function startPublicPreSale() public owned {
+        require(stage == CrowdsaleStage.ClosedPreSale);
+        stage = CrowdsaleStage.PublicPreSale;
+    }
+
+    function startSale() public owned {
+        require(stage == CrowdsaleStage.PublicPreSale);
+        stage = CrowdsaleStage.Sale;
     }
 
     /**
