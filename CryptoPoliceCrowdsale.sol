@@ -1,7 +1,7 @@
 pragma solidity ^0.4.15;
 
-import "MathUtils.sol";
-import "Ownable.sol";
+import "./MathUtils.sol";
+import "./Ownable.sol";
 
 interface CrowdsaleToken {
     function transfer(address destination, uint amount) public returns (bool);
