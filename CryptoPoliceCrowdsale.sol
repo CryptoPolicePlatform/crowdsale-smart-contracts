@@ -82,12 +82,13 @@ contract CryptoPoliceCrowdsale is Ownable {
         if (refundable > 0) {
             msg.sender.transfer(refundable);
         }
+        
+        remainingCrowdsaleTokens = remainingCrowdsaleTokens.sub(tokenAmount);
+        
+        require(token.transfer(msg.sender, tokenAmount));
 
         weiRaised = weiRaised.add(spendableAmount);
-        remainingCrowdsaleTokens = remainingCrowdsaleTokens.sub(tokenAmount);
         weiSpent[msg.sender] = weiSpent[msg.sender].add(spendableAmount);
-
-        require(token.transfer(msg.sender, tokenAmount));
     }
 
     /**
