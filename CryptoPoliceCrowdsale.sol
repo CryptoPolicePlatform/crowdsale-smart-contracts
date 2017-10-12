@@ -68,20 +68,19 @@ contract CryptoPoliceCrowdsale is Ownable {
         var (tokens, weis) = exchange();
 
         require(remainingCrowdsaleTokens > tokens);
-
-        uint spendableAmount = msg.value;
-        uint tokenAmount = spendableAmount / weis * tokens;
+        
+        uint tokenAmount = msg.value / weis * tokens;
 
         // when we try to buy more than there is available
         if (tokenAmount > remainingCrowdsaleTokens) {
             tokenAmount = remainingCrowdsaleTokens / tokens;
-            spendableAmount = tokenAmount * weis;
+        }
 
-            uint refundable = msg.value - spendableAmount;
-            
-            if (refundable > 0) {
-                msg.sender.transfer(refundable);
-            }
+        uint spendableAmount = tokenAmount * weis;
+        uint refundable = msg.value - spendableAmount;
+        
+        if (refundable > 0) {
+            msg.sender.transfer(refundable);
         }
 
         require(token.transfer(msg.sender, tokenAmount));
