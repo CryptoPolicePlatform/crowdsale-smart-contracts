@@ -1,8 +1,8 @@
-pragma solidity ^0.4.15;
+pragma solidity ^0.4.18;
 
 // TODO: Implement safe math
 library MathUtils {
-    function add(uint a, uint b) internal constant returns (uint) {
+    function add(uint a, uint b) internal pure returns (uint) {
         uint result = a + b;
 
         require(result >= a);
@@ -10,12 +10,12 @@ library MathUtils {
         return result;
     }
 
-    function sub(uint a, uint b) internal constant returns (uint) {
-        // TODO: Check for owerflows
+    function sub(uint a, uint b) internal pure returns (uint) {
+        require(a >= b);
         return a - b;
     }
 
-    function mul(uint a, uint b) internal constant returns (uint) {
+    function mul(uint a, uint b) internal pure returns (uint) {
         // TODO: Check for owerflows
         return a * b;
     }

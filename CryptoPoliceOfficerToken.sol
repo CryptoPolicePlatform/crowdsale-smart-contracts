@@ -1,12 +1,13 @@
-pragma solidity ^0.4.15;
-
+pragma solidity ^0.4.18;
+// TODO: Safe math
+// TODO: Don't allow to send tokens to this contract's address?
 /// ERC20 compliant token contract
 contract CryptoPoliceOfficerToken {
     string public name;
     string public symbol;
-    uint8 public decimals = 8;
+    uint8 public decimals = 18;
     
-    uint256 public totalSupply;
+    uint public totalSupply = 1000000000000000000000000000;
     
     mapping(address => uint) balances;
     mapping(address => mapping (address => uint)) allowances;
@@ -25,13 +26,13 @@ contract CryptoPoliceOfficerToken {
     
     function CryptoPoliceOfficerToken(
         string tokenName,
-        string tokenSymbol,
-        uint tokenTotalSupply
-    ) public {
+        string tokenSymbol
+    )
+        public
+    {
         name = tokenName;
         symbol = tokenSymbol;
-        totalSupply = tokenTotalSupply;
-        balances[msg.sender] = tokenTotalSupply;
+        balances[msg.sender] = totalSupply;
     }
 
     function totalSupply() public constant returns (uint) {
@@ -61,7 +62,9 @@ contract CryptoPoliceOfficerToken {
         address source,
         address destination,
         uint amount
-    ) public returns (bool) {
+    )
+        public returns (bool)
+    {
         if (
             amount > 0
             && balances[source] >= amount
@@ -90,7 +93,9 @@ contract CryptoPoliceOfficerToken {
     function approve(
         address destination,
         uint amount
-    ) public returns (bool) {
+    )
+        public returns (bool)
+    {
         allowances[msg.sender][destination] = amount;
         Approval(msg.sender, destination, amount);
         
@@ -100,7 +105,9 @@ contract CryptoPoliceOfficerToken {
     function allowance(
         address fromAccount,
         address destination
-    ) public constant returns (uint) {
+    )
+        public constant returns (uint)
+    {
         return allowances[fromAccount][destination];
     }
 }

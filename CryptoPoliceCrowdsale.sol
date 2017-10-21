@@ -1,14 +1,20 @@
-pragma solidity ^0.4.15;
+pragma solidity ^0.4.18;
 
 import "./MathUtils.sol";
 import "./Ownable.sol";
 
+// TODO: Rename to Token?
+// TODO: Move to own file
 interface CrowdsaleToken {
     function transfer(address destination, uint amount) public returns (bool);
     function totalSupply() public constant returns (uint);
     function balanceOf(address account) public constant returns (uint);
 }
 
+// TODO: Define max gas?
+// TODO: Burn leftover tokens
+// TODO: Refund a specific address
+// TODO: Allow admin to transfer funds when min goal reached?
 contract CryptoPoliceCrowdsale is Ownable {
     using MathUtils for uint;
 
@@ -33,18 +39,18 @@ contract CryptoPoliceCrowdsale is Ownable {
     /**
      * Number of tokens that can be purchased
      */
-    uint internal remainingCrowdsaleTokens;
+    uint public remainingCrowdsaleTokens;
 
     /**
      * When number of remaining crowdsale tokens reaches this number then
      * soft cap has been reached
      */
-    uint internal softCapTreshold;
+    uint public softCapTreshold;
     
     /**
      * Number of wei that has been gathered in sales so far
      */
-    uint internal weiRaised = 0;
+    uint public weiRaised = 0;
 
     /**
      * Token that will be sold
@@ -64,25 +70,30 @@ contract CryptoPoliceCrowdsale is Ownable {
     mapping(address => uint) public weiSpent;
     
     /**
-     * Exchange tokens for weis received
+     * Exchange tokens for Wei received
      */
     function () public payable {
         require(state == CrowdsaleState.Started);
         require(msg.value >= MIN_SALE);
-        require(remainingCrowdsaleTokens > 0);
 
-        var (tokens, weis) = exchange();
+        // get how many tokens must be exchanged per number of Wei
+        var (batchSize, batchPrice) = exchange();
 
-        require(remainingCrowdsaleTokens > tokens);
+        require(remainingCrowdsaleTokens > batchSize);
 
-        uint tokenAmount = msg.value / weis * tokens;
+        uint batches = msg.value / batchPrice;
+        uint tokenAmount = batches * batchSize;
 
         // when we try to buy more than there is available
         if (tokenAmount > remainingCrowdsaleTokens) {
-            tokenAmount = (remainingCrowdsaleTokens / tokens) * tokens;
+            // just because fraction of smallest unit cannot be exchanged
+            // get even number of batches to exchange
+            batches = remainingCrowdsaleTokens / batchSize;
+            tokenAmount = batches * batchSize;
+            state = CrowdsaleState.Ended;
         }
 
-        uint spendableAmount = tokenAmount * weis;
+        uint spendableAmount = batches * batchPrice;
         uint refundable = msg.value - spendableAmount;
         
         if (refundable > 0) {
@@ -138,17 +149,17 @@ contract CryptoPoliceCrowdsale is Ownable {
         }
     }
 
-    function startPublicPreSale() public owned {
+    function startPublicPreSale() public owned notEnded {
         require(stage == CrowdsaleStage.ClosedPreSale);
         stage = CrowdsaleStage.PublicPreSale;
     }
 
-    function startSale() public owned {
+    function startSale() public owned notEnded {
         require(stage == CrowdsaleStage.PublicPreSale);
         stage = CrowdsaleStage.Sale;
     }
 
-    function startLastChance() public owned {
+    function startLastChance() public owned notEnded {
         require(stage == CrowdsaleStage.Sale);
         stage = CrowdsaleStage.LastChance;
     }
@@ -167,23 +178,28 @@ contract CryptoPoliceCrowdsale is Ownable {
         msg.sender.transfer(refundableAmount);
     }
 
-    function exchange() internal returns (uint tokens, uint weis) {
-        tokens = 100000;
+    function exchange() internal view returns (uint batchSize, uint batchPrice) {
+        batchSize = 100000;
 
         if (stage == CrowdsaleStage.ClosedPreSale) {
-            weis = 13;
+            batchPrice = 13;
         } else if (stage == CrowdsaleStage.PublicPreSale) {
-            weis = 16;
+            batchPrice = 16;
         } else if (stage == CrowdsaleStage.Sale) {
-            weis = 20;
+            batchPrice = 20;
         } else if (stage == CrowdsaleStage.LastChance) {
-            weis = 25;
+            batchPrice = 25;
         } else {
             assert(false);
         }
 
-        assert(tokens > 0);
-        assert(weis > 0);
-        assert(MIN_SALE >= weis);
+        assert(batchSize > 0);
+        assert(batchPrice > 0);
+        assert(MIN_SALE >= batchPrice);
+    }
+
+    modifier notEnded {
+        require(state != CrowdsaleState.Ended);
+        _;
     }
 }
