@@ -182,13 +182,13 @@ contract CryptoPoliceCrowdsale is Ownable {
         batchSize = 100000;
 
         if (stage == CrowdsaleStage.ClosedPreSale) {
-            batchPrice = 13;
+            batchPrice = 18;
         } else if (stage == CrowdsaleStage.PublicPreSale) {
-            batchPrice = 16;
+            batchPrice = 21;
         } else if (stage == CrowdsaleStage.Sale) {
-            batchPrice = 20;
-        } else if (stage == CrowdsaleStage.LastChance) {
             batchPrice = 25;
+        } else if (stage == CrowdsaleStage.LastChance) {
+            batchPrice = 28;
         } else {
             assert(false);
         }
