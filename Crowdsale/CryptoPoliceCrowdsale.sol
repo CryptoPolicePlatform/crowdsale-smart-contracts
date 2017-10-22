@@ -1,20 +1,15 @@
 pragma solidity ^0.4.18;
 
-import "./MathUtils.sol";
-import "./Ownable.sol";
+import "./CrowdsaleToken.sol";
+import "../Utils/Ownable.sol";
+import "./../Utils/Math.sol";
 
-// TODO: Rename to Token?
-// TODO: Move to own file
-interface CrowdsaleToken {
-    function transfer(address destination, uint amount) public returns (bool);
-    function totalSupply() public constant returns (uint);
-    function balanceOf(address account) public constant returns (uint);
-}
-
+// TODO: Add option to receive refund from other address?
 // TODO: Define max gas?
 // TODO: Burn leftover tokens
 // TODO: Refund a specific address
 // TODO: Allow admin to transfer funds when min goal reached?
+// TODO: Refund with fallback method
 contract CryptoPoliceCrowdsale is Ownable {
     using MathUtils for uint;
 

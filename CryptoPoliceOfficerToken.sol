@@ -1,12 +1,15 @@
 pragma solidity ^0.4.18;
-// TODO: Safe math
-// TODO: Don't allow to send tokens to this contract's address?
+
+import "./Utils/Math.sol";
+
+// TODO: Implement burn
 /// ERC20 compliant token contract
 contract CryptoPoliceOfficerToken {
+    using MathUtils for uint;
+
     string public name;
     string public symbol;
     uint8 public decimals = 18;
-    
     uint public totalSupply = 1000000000000000000000000000;
     
     mapping(address => uint) balances;
@@ -43,37 +46,34 @@ contract CryptoPoliceOfficerToken {
         return balances[account];
     }
     
-    function transfer(address destination, uint amount) public returns (bool) {
-        if (
-            amount > 0
-            && balances[msg.sender] >= amount
-            && balances[destination] + amount > balances[destination]
-        ) {
+    function transfer(address destination, uint amount)
+    public requiresSufficientBalance(msg.sender, amount) returns (bool)
+    {
+        require(destination != address(this));
+
+        if (amount > 0) {
             balances[msg.sender] -= amount;
-            balances[destination] += amount;
+            balances[destination] = balances[destination].add(amount);
             Transfer(msg.sender, destination, amount);
             return true;
         }
         
         return false;
     }
-    
+
     function transferFrom(
         address source,
         address destination,
         uint amount
     )
-        public returns (bool)
+        public requiresSufficientBalance(source, amount) returns (bool)
     {
-        if (
-            amount > 0
-            && balances[source] >= amount
-            && allowances[source][msg.sender] >= amount
-            && balances[destination] + amount > balances[destination]
-        ) {
+        require(allowances[source][msg.sender] >= amount);
+        
+        if (amount > 0) {
             balances[source] -= amount;
             allowances[source][msg.sender] -= amount;
-            balances[destination] += amount;
+            balances[destination] = balances[destination].add(amount);
             Transfer(source, destination, amount);
             
             return true;
@@ -109,5 +109,10 @@ contract CryptoPoliceOfficerToken {
         public constant returns (uint)
     {
         return allowances[fromAccount][destination];
+    }
+
+    modifier requiresSufficientBalance(address account, uint balance) {
+        require(balances[account] >= balance);
+        _;
     }
 }
