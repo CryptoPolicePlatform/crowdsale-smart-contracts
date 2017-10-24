@@ -1,19 +1,20 @@
 pragma solidity ^0.4.18;
 
-import "./Utils/Math.sol";
+import "./../Utils/Math.sol";
+import "./TotalSupply.sol";
+import "./Burnable.sol";
+import "./Balance.sol";
 
 // TODO: Implement burn
 /// ERC20 compliant token contract
-contract CryptoPoliceOfficerToken {
+contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
     using MathUtils for uint;
 
     string public name;
     string public symbol;
     uint8 public decimals = 18;
-    uint public totalSupply = 1000000000000000000000000000;
-    
-    mapping(address => uint) balances;
-    mapping(address => mapping (address => uint)) allowances;
+
+    mapping(address => mapping(address => uint)) allowances;
     
     event Transfer(
         address indexed fromAccount,
@@ -36,14 +37,6 @@ contract CryptoPoliceOfficerToken {
         name = tokenName;
         symbol = tokenSymbol;
         balances[msg.sender] = totalSupply;
-    }
-
-    function totalSupply() public constant returns (uint) {
-        return totalSupply;
-    }
-    
-    function balanceOf(address account) public constant returns (uint) {
-        return balances[account];
     }
     
     function transfer(address destination, uint amount)
@@ -109,10 +102,5 @@ contract CryptoPoliceOfficerToken {
         public constant returns (uint)
     {
         return allowances[fromAccount][destination];
-    }
-
-    modifier requiresSufficientBalance(address account, uint balance) {
-        require(balances[account] >= balance);
-        _;
     }
 }
