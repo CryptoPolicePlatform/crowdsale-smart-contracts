@@ -7,7 +7,7 @@ contract Ownable {
         owner = msg.sender;
     }
 
-    modifier owned {
+    modifier grantOwner {
         require(msg.sender == owner);
         _;
     }

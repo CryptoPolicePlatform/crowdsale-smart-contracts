@@ -7,7 +7,7 @@ import "./Balance.sol";
 
 contract Burnable is TotalSupply, Balance, Ownable {
     using MathUtils for uint;
-    
+
     event Burn(address account, uint value);
 
     mapping(address => bool) internal burners;
@@ -19,11 +19,11 @@ contract Burnable is TotalSupply, Balance, Ownable {
         Burn(msg.sender, amount);
     }
 
-    function grantBurn(address burner) public owned {
+    function grantBurn(address burner) public grantOwner {
         burners[burner] = true;
     }
 
-    function removeBurnAccess(address burner) public owned {
+    function removeBurnAccess(address burner) public grantOwner {
         burners[burner] = false;
     }
 

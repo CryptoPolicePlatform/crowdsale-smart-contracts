@@ -115,7 +115,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         uint crowdsaleTokenVolume,
         uint softCap
     )
-        public owned
+        public grantOwner
     {
         require(state == CrowdsaleState.Pending);
         token = CrowdsaleToken(crowdsaleToken);
@@ -128,12 +128,12 @@ contract CryptoPoliceCrowdsale is Ownable {
         state = CrowdsaleState.Started;
     }
 
-    function pauseCrowdsale() public owned {
+    function pauseCrowdsale() public grantOwner {
         require(state == CrowdsaleState.Started);
         state = CrowdsaleState.Paused;
     }
 
-    function unPauseCrowdsale() public owned {
+    function unPauseCrowdsale() public grantOwner {
         require(state == CrowdsaleState.Paused);
         state = CrowdsaleState.Started;
     }
@@ -141,7 +141,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     /**
      * Command for owner to end crowdsale
      */
-    function endCrowdsale() public owned {
+    function endCrowdsale() public grantOwner {
         require(state == CrowdsaleState.Started);
         
         state = CrowdsaleState.Ended;
@@ -151,17 +151,17 @@ contract CryptoPoliceCrowdsale is Ownable {
         }
     }
 
-    function startPublicPresaleStage() public owned notEnded {
+    function startPublicPresaleStage() public grantOwner notEnded {
         require(stage == CrowdsaleStage.ClosedPresale);
         stage = CrowdsaleStage.PublicPresale;
     }
 
-    function startSaleStage() public owned notEnded {
+    function startSaleStage() public grantOwner notEnded {
         require(stage == CrowdsaleStage.PublicPresale);
         stage = CrowdsaleStage.Sale;
     }
 
-    function startLastChanceStage() public owned notEnded {
+    function startLastChanceStage() public grantOwner notEnded {
         require(stage == CrowdsaleStage.Sale);
         stage = CrowdsaleStage.LastChance;
     }
@@ -179,7 +179,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         msg.sender.transfer(refundableAmount);
     }
 
-    function refund(address participant) public owned {
+    function refund(address participant) public grantOwner {
         refundContribution(participant);
     }
 
