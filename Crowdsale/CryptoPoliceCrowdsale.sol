@@ -183,6 +183,16 @@ contract CryptoPoliceCrowdsale is Ownable {
         refundContribution(participant);
     }
 
+    function burnLeftoverTokens(uint8 percentage) public grantOwner {
+        require(state == CrowdsaleState.Ended);
+        require(percentage <= 100 && percentage > 0);
+
+        if (remainingCrowdsaleTokens > 0) {
+            uint amount = percentage / 100 * remainingCrowdsaleTokens;
+            token.burn(amount);
+        }
+    }
+
     /**
      * Defines number of tokens and associated price in exchange
      */

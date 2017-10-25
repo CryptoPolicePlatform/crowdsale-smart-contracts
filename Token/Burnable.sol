@@ -12,8 +12,7 @@ contract Burnable is TotalSupply, Balance, Ownable {
 
     mapping(address => bool) internal burners;
 
-    function burn(uint amount) public grantBurner requiresSufficientBalance(msg.sender, amount)
-    {
+    function burn(uint amount) public grantBurner requiresSufficientBalance(msg.sender, amount) {
         balances[msg.sender] = balances[msg.sender].sub(amount);
         totalSupply = totalSupply.sub(amount);
         Burn(msg.sender, amount);
