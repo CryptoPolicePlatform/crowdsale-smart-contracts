@@ -16,11 +16,6 @@ contract CryptoPoliceCrowdsale is Ownable {
     enum CrowdsaleStage {
         ClosedPresale, PublicPresale, Sale, LastChance
     }
-    
-    /**
-     * Minimum goal for this crowdsale
-     */
-    uint public constant MIN_GOAL = 1700 ether;
 
     /**
      * Minimum number of wei that can be exchanged for tokens
@@ -60,6 +55,7 @@ contract CryptoPoliceCrowdsale is Ownable {
      */
     mapping(address => uint) public weiSpent;
     
+    bool public crowdsaleEndedSuccessfully = false;
     /**
      * Exchange tokens for Wei received
      */
@@ -141,12 +137,13 @@ contract CryptoPoliceCrowdsale is Ownable {
     /**
      * Command for owner to end crowdsale
      */
-    function endCrowdsale() public grantOwner {
+    function endCrowdsale(bool success) public grantOwner {
         require(state == CrowdsaleState.Started);
         
         state = CrowdsaleState.Ended;
+        crowdsaleEndedSuccessfully = success;
 
-        if (weiRaised >= MIN_GOAL) {
+        if (success) {
             owner.transfer(weiRaised);
         }
     }
@@ -170,8 +167,9 @@ contract CryptoPoliceCrowdsale is Ownable {
      * Allow crowdsale participant to get refunded
      */
     function refundContribution(address participant) internal {
+        require(state == CrowdsaleState.Ended);
         require(weiSpent[participant] > 0);
-        require(weiRaised < MIN_GOAL);
+        require(crowdsaleEndedSuccessfully == false);
         
         uint refundableAmount = weiSpent[participant];
         weiSpent[participant] = 0;
