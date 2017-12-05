@@ -10,7 +10,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     using MathUtils for uint;
 
     enum CrowdsaleState {
-        Pending, Started, Ended, Paused
+        Pending, Started, Ended, Paused, SoldOut
     }
 
     enum CrowdsaleStage {
@@ -81,7 +81,7 @@ contract CryptoPoliceCrowdsale is Ownable {
                 // get even number of batches to exchange
                 batches = remainingCrowdsaleTokens / batchSize;
                 tokenAmount = batches * batchSize;
-                state = CrowdsaleState.Ended;
+                state = CrowdsaleState.SoldOut;
             }
 
             uint spendableAmount = batches * batchPrice;
