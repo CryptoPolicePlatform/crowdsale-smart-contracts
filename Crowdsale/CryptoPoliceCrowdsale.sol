@@ -137,9 +137,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     /**
      * Command for owner to end crowdsale
      */
-    function endCrowdsale(bool success) public grantOwner {
-        require(state == CrowdsaleState.Started);
-        
+    function endCrowdsale(bool success) public grantOwner notEnded {
         state = CrowdsaleState.Ended;
         crowdsaleEndedSuccessfully = success;
 
