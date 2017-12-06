@@ -70,46 +70,58 @@ contract CryptoPoliceCrowdsale is Ownable {
             refundContribution(msg.sender);
         } else {
             require(state == CrowdsaleState.Started);
-            require(msg.value >= MIN_SALE);
-
-            // get how many tokens must be exchanged per number of Wei
-            var (batchSize, batchPrice) = exchange();
-
-            require(remainingCrowdsaleTokens > batchSize);
-
-            uint batches = msg.value / batchPrice;
-            uint tokenAmount = batches * batchSize;
-
-            // when we try to buy more than there is available
-            if (tokenAmount > remainingCrowdsaleTokens) {
-                // just because fraction of smallest unit cannot be exchanged
-                // get even number of batches to exchange
-                batches = remainingCrowdsaleTokens / batchSize;
-                tokenAmount = batches * batchSize;
-                state = CrowdsaleState.SoldOut;
-            }
-
-            uint spendableAmount = batches * batchPrice;
-            uint refundable = msg.value - spendableAmount;
-            
-            if (refundable > 0) {
-                msg.sender.transfer(refundable);
-            }
-            
-            remainingCrowdsaleTokens = remainingCrowdsaleTokens.sub(tokenAmount);
-            weiSpent[msg.sender] = weiSpent[msg.sender].add(spendableAmount);
-            weiRaised = weiRaised.add(spendableAmount);
-            
-            if ( ! identifiedAddresses[msg.sender]) {
-                require(weiSpent[msg.sender] <= unidentifiedAddressMaxInvestment);
-            }
-
-            if (softCapTreshold >= remainingCrowdsaleTokens) {
-                stage = CrowdsaleStage.LastChance;
-            }
-
-            require(token.transfer(msg.sender, tokenAmount));
+            exchange(msg.sender, msg.value);
         }
+    }
+
+    function exchange(address sender, uint weiSent) internal {
+        require(weiSent >= MIN_SALE);
+
+        // get how many tokens must be exchanged per number of Wei
+        var (batchSize, batchPrice) = exchangeRate();
+
+        require(remainingCrowdsaleTokens > batchSize);
+
+        uint batches = weiSent / batchPrice;
+        uint tokenAmount = batches * batchSize;
+
+        // when we try to buy more than there is available
+        if (tokenAmount > remainingCrowdsaleTokens) {
+            // just because fraction of smallest unit cannot be exchanged
+            // get even number of batches to exchange
+            batches = remainingCrowdsaleTokens / batchSize;
+            tokenAmount = batches * batchSize;
+            state = CrowdsaleState.SoldOut;
+        }
+
+        uint spendableAmount = batches * batchPrice;
+        uint refundable = weiSent - spendableAmount;
+        
+        if (refundable > 0) {
+            sender.transfer(refundable);
+        }
+        
+        remainingCrowdsaleTokens = remainingCrowdsaleTokens.sub(tokenAmount);
+        weiSpent[sender] = weiSpent[sender].add(spendableAmount);
+        weiRaised = weiRaised.add(spendableAmount);
+        
+        if ( ! identifiedAddresses[sender]) {
+            require(weiSpent[sender] <= unidentifiedAddressMaxInvestment);
+        }
+
+        if (softCapTreshold >= remainingCrowdsaleTokens) {
+            stage = CrowdsaleStage.LastChance;
+        }
+
+        require(token.transfer(sender, tokenAmount));
+    }
+
+    /**
+     * Intended when other currencies are received and owner has to carry out exchange
+     * for those funds aligned to Wei
+     */
+    function proxyExchange(address sender, uint weiSent) public grantOwner {
+        exchange(sender, weiSent);
     }
 
     /**
@@ -215,7 +227,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     /**
      * Defines number of tokens and associated price in exchange
      */
-    function exchange()
+    function exchangeRate()
         internal view
         returns (uint batchSize, uint batchPrice)
     {
