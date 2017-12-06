@@ -14,7 +14,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     }
 
     enum CrowdsaleStage {
-        ClosedPresale, PublicPresale, Sale, LastChance
+        TokenReservation, ClosedPresale, PublicPresale, Sale, LastChance
     }
 
     /**
@@ -48,7 +48,7 @@ contract CryptoPoliceCrowdsale is Ownable {
      */
     CrowdsaleState public state = CrowdsaleState.Pending;
     
-    CrowdsaleStage public stage = CrowdsaleStage.ClosedPresale;
+    CrowdsaleStage public stage = CrowdsaleStage.TokenReservation;
 
     /**
      * Amount of wei each participant has spent in crowdsale
@@ -146,6 +146,11 @@ contract CryptoPoliceCrowdsale is Ownable {
         }
     }
 
+    function startClosedPresaleStage() public grantOwner notEnded {
+        require(stage == CrowdsaleStage.TokenReservation);
+        stage = CrowdsaleStage.ClosedPresale;
+    }
+
     function startPublicPresaleStage() public grantOwner notEnded {
         require(stage == CrowdsaleStage.ClosedPresale);
         stage = CrowdsaleStage.PublicPresale;
@@ -198,7 +203,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     {
         batchSize = 100000;
 
-        if (stage == CrowdsaleStage.ClosedPresale) {
+        if (stage == CrowdsaleStage.ClosedPresale || stage == CrowdsaleStage.TokenReservation) {
             batchPrice = 18;
         } else if (stage == CrowdsaleStage.PublicPresale) {
             batchPrice = 21;
