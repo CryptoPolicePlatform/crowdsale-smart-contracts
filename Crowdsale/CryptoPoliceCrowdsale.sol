@@ -54,8 +54,13 @@ contract CryptoPoliceCrowdsale is Ownable {
      * Amount of wei each participant has spent in crowdsale
      */
     mapping(address => uint) public weiSpent;
+
+    mapping(address => bool) public identifiedAddresses;
     
     bool public crowdsaleEndedSuccessfully = false;
+
+    uint public unidentifiedAddressMaxInvestment = 25 ether;
+
     /**
      * Exchange tokens for Wei received
      */
@@ -95,6 +100,10 @@ contract CryptoPoliceCrowdsale is Ownable {
             weiSpent[msg.sender] = weiSpent[msg.sender].add(spendableAmount);
             weiRaised = weiRaised.add(spendableAmount);
             
+            if ( ! identifiedAddresses[msg.sender]) {
+                require(weiSpent[msg.sender] <= unidentifiedAddressMaxInvestment);
+            }
+
             if (softCapTreshold >= remainingCrowdsaleTokens) {
                 stage = CrowdsaleStage.LastChance;
             }
@@ -164,6 +173,15 @@ contract CryptoPoliceCrowdsale is Ownable {
     function startLastChanceStage() public grantOwner notEnded {
         require(stage == CrowdsaleStage.Sale);
         stage = CrowdsaleStage.LastChance;
+    }
+
+    function markAddressIdentified(address _address) public grantOwner notEnded {
+        identifiedAddresses[_address] = true;
+    }
+
+    function updateUnidentifiedAddressMaxInvestment(uint maxWei) public grantOwner notEnded {
+        require(maxWei >= MIN_SALE);
+        unidentifiedAddressMaxInvestment = maxWei;
     }
 
     /**
