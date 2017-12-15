@@ -1,11 +1,10 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.19;
 
 import "./CrowdsaleToken.sol";
 import "../Utils/Ownable.sol";
 import "./../Utils/Math.sol";
 
-// TODO: Burn leftover tokens
-// TODO: Allow admin to transfer funds when min goal reached?
+// TODO: Automatic stage change based on sold out token volume
 contract CryptoPoliceCrowdsale is Ownable {
     using MathUtils for uint;
 
@@ -17,26 +16,29 @@ contract CryptoPoliceCrowdsale is Ownable {
         TokenReservation, ClosedPresale, PublicPresale, Sale, LastChance
     }
 
+    struct ExchangeRate {
+        uint tokens;
+        uint price;
+    }
+
     /**
      * Minimum number of wei that can be exchanged for tokens
      */
     uint public constant MIN_SALE = 0.01 ether;
 
-    /**
-     * Number of tokens that can be purchased
-     */
-    uint public remainingCrowdsaleTokens;
+    uint public constant MIN_CAP = 12500000 * 10^18;
+    uint public constant SOFT_CAP = 40000000 * 10^18;
+    uint public constant POWER_CAP = 160000000 * 10^18;
+    uint public constant HARD_CAP = 400000000 * 10^18;
 
-    /**
-     * When number of remaining crowdsale tokens reaches this number then
-     * soft cap has been reached
-     */
-    uint public softCapTreshold;
+    uint public tokensExchanged;
     
     /**
      * Number of wei that has been gathered in sales so far
      */
     uint public weiRaised = 0;
+
+    uint public weiTransfered = 0;
 
     /**
      * Token that will be sold
@@ -56,10 +58,14 @@ contract CryptoPoliceCrowdsale is Ownable {
     mapping(address => uint) public weiSpent;
 
     mapping(address => bool) public identifiedAddresses;
+
+    mapping(address => uint) public suspended;
+
+    mapping(uint8 => ExchangeRate) exchangeRates;
     
     bool public crowdsaleEndedSuccessfully = false;
 
-    uint public unidentifiedAddressMaxInvestment = 25 ether;
+    uint public maxUnidentifiedInvestment = 25 ether;
 
     /**
      * Exchange tokens for Wei received
@@ -80,17 +86,18 @@ contract CryptoPoliceCrowdsale is Ownable {
         // get how many tokens must be exchanged per number of Wei
         var (batchSize, batchPrice) = exchangeRate();
 
-        require(remainingCrowdsaleTokens > batchSize);
+        uint tokensRemaining = HARD_CAP - tokensExchanged;
+        require(tokensRemaining >= batchSize);
 
         uint batches = weiSent / batchPrice;
-        uint tokenAmount = batches * batchSize;
+        uint tokenAmount = batches.mul(batchSize);
 
         // when we try to buy more than there is available
-        if (tokenAmount > remainingCrowdsaleTokens) {
+        if (tokenAmount > tokensRemaining) {
             // just because fraction of smallest unit cannot be exchanged
             // get even number of batches to exchange
-            batches = remainingCrowdsaleTokens / batchSize;
-            tokenAmount = batches * batchSize;
+            batches = tokensRemaining / batchSize;
+            tokenAmount = batches.mul(batchSize);
             state = CrowdsaleState.SoldOut;
         }
 
@@ -101,19 +108,17 @@ contract CryptoPoliceCrowdsale is Ownable {
             sender.transfer(refundable);
         }
         
-        remainingCrowdsaleTokens = remainingCrowdsaleTokens.sub(tokenAmount);
-        weiSpent[sender] = weiSpent[sender].add(spendableAmount);
-        weiRaised = weiRaised.add(spendableAmount);
+        uint senderWeiSpent = weiSpent[sender].add(spendableAmount);
         
-        if ( ! identifiedAddresses[sender]) {
-            require(weiSpent[sender] <= unidentifiedAddressMaxInvestment);
-        }
+        if (senderWeiSpent <= maxUnidentifiedInvestment || identifiedAddresses[sender]) {
+            weiSpent[sender] = senderWeiSpent;
+            tokensExchanged = tokensExchanged.add(tokenAmount);
+            weiRaised = weiRaised.add(spendableAmount);
 
-        if (softCapTreshold >= remainingCrowdsaleTokens) {
-            stage = CrowdsaleStage.LastChance;
+            require(token.transfer(sender, tokenAmount));
+        } else {
+            suspended[sender] = suspended[sender].add(spendableAmount);
         }
-
-        require(token.transfer(sender, tokenAmount));
     }
 
     /**
@@ -127,21 +132,10 @@ contract CryptoPoliceCrowdsale is Ownable {
     /**
      * Command for owner to start crowdsale
      */
-    function startCrowdsale(
-        address crowdsaleToken,
-        uint crowdsaleTokenVolume,
-        uint softCap
-    )
-        public grantOwner
-    {
+    function startCrowdsale(address crowdsaleToken) public grantOwner {
         require(state == CrowdsaleState.Pending);
         token = CrowdsaleToken(crowdsaleToken);
-        softCapTreshold = crowdsaleTokenVolume - softCap;
-        remainingCrowdsaleTokens = crowdsaleTokenVolume;
-        // number of tokens required for this crowdsale operation
-        // including purchaseable tokens, bounty tokens etc.
-        uint allocation = remainingCrowdsaleTokens;
-        require(token.balanceOf(address(this)) == allocation);
+        require(token.balanceOf(address(this)) == HARD_CAP);
         state = CrowdsaleState.Started;
     }
 
@@ -163,7 +157,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         crowdsaleEndedSuccessfully = success;
 
         if (success) {
-            owner.transfer(weiRaised);
+            transferFunds(owner, weiRaised - weiTransfered);
         }
     }
 
@@ -189,11 +183,31 @@ contract CryptoPoliceCrowdsale is Ownable {
 
     function markAddressIdentified(address _address) public grantOwner notEnded {
         identifiedAddresses[_address] = true;
+
+        if (suspended[_address] > 0) {
+            exchange(_address, suspended[_address]);
+            suspended[_address] = 0;
+        }
     }
 
-    function updateUnidentifiedAddressMaxInvestment(uint maxWei) public grantOwner notEnded {
-        require(maxWei >= MIN_SALE);
-        unidentifiedAddressMaxInvestment = maxWei;
+    function returnSuspendedFunds(address _address) public grantOwner {
+        if (suspended[_address] > 0) {
+            _address.transfer(suspended[_address]);
+        }
+    }
+
+    function transferFunds(address recipient, uint weiAmount) public grantOwner {
+        require(tokensExchanged >= MIN_CAP);
+        require(weiRaised > weiTransfered);
+        require((weiRaised - weiTransfered) >= weiAmount);
+
+        weiTransfered = weiTransfered + weiAmount;
+        recipient.transfer(weiAmount);
+    }
+
+    function updateMaxUnidentifiedInvestment(uint maxWei) public grantOwner notEnded {
+        require(maxWei >= MIN_SALE); // TODO: Min sale could change
+        maxUnidentifiedInvestment = maxWei;
     }
 
     /**
@@ -218,10 +232,21 @@ contract CryptoPoliceCrowdsale is Ownable {
         require(state == CrowdsaleState.Ended);
         require(percentage <= 100 && percentage > 0);
 
-        if (remainingCrowdsaleTokens > 0) {
-            uint amount = percentage / 100 * remainingCrowdsaleTokens;
+        uint tokensRemaining = HARD_CAP - tokensExchanged;
+
+        if (tokensRemaining > 0) {
+            uint amount = percentage / 100 * tokensRemaining;
             token.burn(amount);
         }
+    }
+
+    function updateExchangeRate(CrowdsaleStage _stage, uint tokens, uint price) public grantOwner {
+        require(tokens > 0 && price > 0);
+
+        exchangeRates[uint8(_stage)] = ExchangeRate({
+            tokens: tokens,
+            price: price
+        });
     }
 
     /**
@@ -231,23 +256,12 @@ contract CryptoPoliceCrowdsale is Ownable {
         internal view
         returns (uint batchSize, uint batchPrice)
     {
-        batchSize = 100000;
+        ExchangeRate storage rate = exchangeRates[uint8(stage)];
 
-        if (stage == CrowdsaleStage.ClosedPresale || stage == CrowdsaleStage.TokenReservation) {
-            batchPrice = 18;
-        } else if (stage == CrowdsaleStage.PublicPresale) {
-            batchPrice = 21;
-        } else if (stage == CrowdsaleStage.Sale) {
-            batchPrice = 25;
-        } else if (stage == CrowdsaleStage.LastChance) {
-            batchPrice = 28;
-        } else {
-            assert(false);
-        }
+        require(rate.tokens > 0 && rate.price > 0);
 
-        assert(batchSize > 0);
-        assert(batchPrice > 0);
-        assert(MIN_SALE >= batchPrice);
+        batchSize = rate.tokens;
+        batchPrice = rate.price;
     }
 
     modifier notEnded {
