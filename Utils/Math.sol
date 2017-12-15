@@ -1,6 +1,5 @@
 pragma solidity ^0.4.19;
 
-// TODO: Implement safe math
 library MathUtils {
     function add(uint a, uint b) internal pure returns (uint) {
         uint result = a + b;
@@ -28,7 +27,7 @@ library MathUtils {
         uint result = a * b;
 
         require(result / a == b);
-        
+
         return result;
     }
 }
