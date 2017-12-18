@@ -21,17 +21,17 @@ contract CryptoPoliceCrowdsale is Ownable {
         uint price;
     }
 
-    /**
-     * Minimum number of wei that can be exchanged for tokens
-     */
-    uint public constant MIN_SALE = 0.01 ether;
-
     uint public constant MIN_CAP = 12500000 * 10^18;
     uint public constant SOFT_CAP = 40000000 * 10^18;
     uint public constant POWER_CAP = 160000000 * 10^18;
     uint public constant HARD_CAP = 400000000 * 10^18;
 
     uint public tokensExchanged;
+
+    /**
+     * Minimum number of wei that can be exchanged for tokens
+     */
+    uint public minSale = 0.01 ether;
     
     /**
      * Number of wei that has been gathered in sales so far
@@ -81,7 +81,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     }
 
     function exchange(address sender, uint weiSent) internal {
-        require(weiSent >= MIN_SALE);
+        require(weiSent >= minSale);
 
         // get how many tokens must be exchanged per number of Wei
         var (batchSize, batchPrice) = exchangeRate();
@@ -206,8 +206,12 @@ contract CryptoPoliceCrowdsale is Ownable {
     }
 
     function updateMaxUnidentifiedInvestment(uint maxWei) public grantOwner notEnded {
-        require(maxWei >= MIN_SALE); // TODO: Min sale could change
+        require(maxWei >= minSale);
         maxUnidentifiedInvestment = maxWei;
+    }
+
+    function updateMinSale(uint weiAmount) public grantOwner {
+        minSale = weiAmount;
     }
 
     /**
