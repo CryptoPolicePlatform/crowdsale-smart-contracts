@@ -21,10 +21,10 @@ contract CryptoPoliceCrowdsale is Ownable {
         uint price;
     }
 
-    uint public constant MIN_CAP = 12500000 * 10^18;
-    uint public constant SOFT_CAP = 40000000 * 10^18;
-    uint public constant POWER_CAP = 160000000 * 10^18;
-    uint public constant HARD_CAP = 400000000 * 10^18;
+    uint public constant MIN_CAP = 12500000 * 10**18;
+    uint public constant SOFT_CAP = 40000000 * 10**18;
+    uint public constant POWER_CAP = 160000000 * 10**18;
+    uint public constant HARD_CAP = 400000000 * 10**18;
 
     uint public tokensExchanged;
 
@@ -91,7 +91,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         }
 
         uint tokens;
-        uint weiSentOriginal = weiSent;
+        uint weiExchanged;
 
         while (true) {
             var (batchSize, batchPrice) = exchangeRate();
@@ -109,7 +109,7 @@ contract CryptoPoliceCrowdsale is Ownable {
 
                 if (batches > 0) {
                     tokens = tokens + batches;
-                    weiSent = weiSent - (batches * batchPrice);
+                    weiExchanged = batches * batchPrice;
                     tokensExchanged = tokensExchanged + tokens;
                 }
 
@@ -123,18 +123,20 @@ contract CryptoPoliceCrowdsale is Ownable {
             }
 
             tokens = tokens + tokenAmount;
+            weiExchanged = batches * batchPrice;
             tokensExchanged = tokensExchanged + tokens;
             
             break;
         }
+        
+        uint weiNotExchanged = weiSent - weiExchanged;
 
-        if (weiSent > 0) {
-            sender.transfer(weiSent);
+        if (weiNotExchanged > 0) {
+            sender.transfer(weiNotExchanged);
         }
 
-        uint _weiSpent = weiSentOriginal - weiSent;
-        weiSpent[sender] = weiSpent[sender] + _weiSpent;
-        weiRaised = weiRaised + _weiSpent;
+        weiSpent[sender] = weiSpent[sender] + weiExchanged;
+        weiRaised = weiRaised + weiExchanged;
 
         require(token.transfer(sender, tokens));
     }
