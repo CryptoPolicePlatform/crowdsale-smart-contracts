@@ -1,0 +1,21 @@
+{
+  "name": "ico-contracts",
+  "version": "1.0.0",
+  "description": "CryptoPolice ICO",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "bignumber.js": "^5.0.0"
+  },
+  "devDependencies": {
+    "bignumber.js": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@bitbucket.org/cunamiweb/ico-contracts.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "homepage": "https://bitbucket.org/cunamiweb/ico-contracts#readme"
+}
