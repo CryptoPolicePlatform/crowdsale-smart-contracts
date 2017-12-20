@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.18;
 
 import "./../Utils/Math.sol";
 import "./TotalSupply.sol";

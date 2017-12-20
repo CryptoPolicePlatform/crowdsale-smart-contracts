@@ -1,4 +1,4 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.18;
 
 import "./CrowdsaleToken.sol";
 import "../Utils/Ownable.sol";
@@ -61,6 +61,9 @@ contract CryptoPoliceCrowdsale is Ownable {
 
     mapping(address => uint) public suspended;
 
+    /**
+     * Map stage to its corresponding exchange rate
+     */
     mapping(uint8 => ExchangeRate) exchangeRates;
     
     bool public crowdsaleEndedSuccessfully = false;
@@ -83,42 +86,57 @@ contract CryptoPoliceCrowdsale is Ownable {
     function exchange(address sender, uint weiSent) internal {
         require(weiSent >= minSale);
 
-        // get how many tokens must be exchanged per number of Wei
-        var (batchSize, batchPrice) = exchangeRate();
-
-        uint tokensRemaining = HARD_CAP - tokensExchanged;
-        require(tokensRemaining >= batchSize);
-
-        uint batches = weiSent / batchPrice;
-        uint tokenAmount = batches.mul(batchSize);
-
-        // when we try to buy more than there is available
-        if (tokenAmount > tokensRemaining) {
-            // just because fraction of smallest unit cannot be exchanged
-            // get even number of batches to exchange
-            batches = tokensRemaining / batchSize;
-            tokenAmount = batches.mul(batchSize);
-            state = CrowdsaleState.SoldOut;
+        if (trySuspend(sender, weiSent)) {
+            return;
         }
 
-        uint spendableAmount = batches * batchPrice;
-        uint refundable = weiSent - spendableAmount;
-        
-        if (refundable > 0) {
-            sender.transfer(refundable);
-        }
-        
-        uint senderWeiSpent = weiSpent[sender].add(spendableAmount);
-        
-        if (senderWeiSpent <= maxUnidentifiedInvestment || identifiedAddresses[sender]) {
-            weiSpent[sender] = senderWeiSpent;
-            tokensExchanged = tokensExchanged.add(tokenAmount);
-            weiRaised = weiRaised.add(spendableAmount);
+        uint tokens;
+        uint weiSentOriginal = weiSent;
 
-            require(token.transfer(sender, tokenAmount));
-        } else {
-            suspended[sender] = suspended[sender].add(spendableAmount);
+        while (true) {
+            var (batchSize, batchPrice) = exchangeRate();
+            
+            uint batches = weiSent / batchPrice;
+            uint tokenAmount = batches.mul(batchSize);
+            uint stageCap = getStageCap();
+            
+            if (tokenAmount > stageCap) {
+                // we have to exchange remainder for current rate
+                uint remainder = stageCap - tokensExchanged;
+
+                // how many tokens can be exchanged
+                batches = remainder / batchSize;
+
+                if (batches > 0) {
+                    tokens = tokens + batches;
+                    weiSent = weiSent - (batches * batchPrice);
+                    tokensExchanged = tokensExchanged + tokens;
+                }
+
+                if (stageCap == HARD_CAP) {
+                    state = CrowdsaleState.SoldOut;
+                    break;
+                }
+
+                enterNextStage();
+                continue;
+            }
+
+            tokens = tokens + tokenAmount;
+            tokensExchanged = tokensExchanged + tokens;
+            
+            break;
         }
+
+        if (weiSent > 0) {
+            sender.transfer(weiSent);
+        }
+
+        uint _weiSpent = weiSentOriginal - weiSent;
+        weiSpent[sender] = weiSpent[sender] + _weiSpent;
+        weiRaised = weiRaised + _weiSpent;
+
+        require(token.transfer(sender, tokens));
     }
 
     /**
@@ -266,6 +284,43 @@ contract CryptoPoliceCrowdsale is Ownable {
 
         batchSize = rate.tokens;
         batchPrice = rate.price;
+    }
+
+    function getStageCap() internal view returns (uint) {
+        if (stage == CrowdsaleStage.TokenReservation || stage == CrowdsaleStage.ClosedPresale) {
+            return MIN_CAP;
+        } else if (stage == CrowdsaleStage.PublicPresale) {
+            return SOFT_CAP;
+        } else if (stage == CrowdsaleStage.Sale) {
+            return POWER_CAP;
+        } else if (stage == CrowdsaleStage.LastChance) {
+            return HARD_CAP;
+        }
+
+        assert(false);
+    }
+
+    function enterNextStage() internal {
+        if (stage == CrowdsaleStage.TokenReservation || stage == CrowdsaleStage.ClosedPresale) {
+            stage = CrowdsaleStage.PublicPresale;
+        } else if (stage == CrowdsaleStage.PublicPresale) {
+            stage = CrowdsaleStage.Sale;
+        } else if (stage == CrowdsaleStage.Sale) {
+            stage = CrowdsaleStage.LastChance;
+        }
+
+        assert(false);
+    }
+
+    function trySuspend(address sender, uint weiSent) internal returns (bool) {
+        uint senderWeiSpent = weiSpent[sender].add(weiSent);
+
+        if (senderWeiSpent > maxUnidentifiedInvestment && ! identifiedAddresses[sender]) {
+            suspended[sender] = suspended[sender].add(weiSent);
+            return true;
+        }
+
+        return false;
     }
 
     modifier notEnded {
