@@ -138,7 +138,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         weiSpent[sender] = weiSpent[sender] + weiExchanged;
         weiRaised = weiRaised + weiExchanged;
 
-        require(token.transfer(sender, tokens));
+        require(token.transferFrom(owner, sender, tokens));
     }
 
     /**
@@ -155,7 +155,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     function startCrowdsale(address crowdsaleToken) public grantOwner {
         require(state == CrowdsaleState.Pending);
         token = CrowdsaleToken(crowdsaleToken);
-        require(token.balanceOf(address(this)) == HARD_CAP);
+        require(token.allowance(owner, address(this)) == HARD_CAP);
         state = CrowdsaleState.Started;
     }
 
