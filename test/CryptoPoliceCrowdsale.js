@@ -9,11 +9,11 @@ const minSale = new BigNumber("1e+16");
 const gasPrice = 10000000000;
 
 // BE AVARE THAT TESTS DEPEND ON EACH OTHER!!
-// Tests before can set state for next test execution
+// Tests beforehand can set state for next test execution
 // Execution order and state change should be kept in mind
 contract('CryptoPoliceCrowdsale', function(accounts) {
-    describe("Before crowdsale started", function () {
-        it("Payments will get rejected", function () {
+    describe("Before crowdsale is started", function () {
+        it("Payment is rejected", function () {
             return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
                 return crowdsale.send(web3.toWei(1, "ether")).then(function() {
                     Assert.fail("Payment should have not been accepted");
@@ -24,8 +24,8 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         });
         it("Admin can start crowdsale", startCrowdsale);
     });
-    describe("After crowdsale started", function () {
-        it("Payments will get rejected before exchange rate is set", function () {
+    describe("After crowdsale is started", function () {
+        it("Reject payment when exchange rate is not set", function () {
             return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
                 return crowdsale.send(web3.toWei(0.01, "ether")).then(function() {
                     Assert.fail("Payment should have not been accepted");
@@ -41,7 +41,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                 })
             })
         });
-        it("Payment under 0.01 ether will get rejected", function() {
+        it("Payment less that minimum sale is rejected", function() {
             return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
                 return crowdsale.send(web3.toWei(0.009, "ether")).then(function() {
                     Assert.fail("Payment should have not been accepted");
@@ -50,7 +50,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                 })
             })
         });
-        it("Payment of 0.01 ether will yield correct number of tokens in exchange", function() {
+        it("Payment will yield correct number of tokens in return", function() {
             return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
                 const balanceBefore = web3.eth.getBalance(accounts[1]);
                 return crowdsale.sendTransaction({
@@ -75,7 +75,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
 });
 contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
-    it("Exchange rate gets switched after cap reached", function() {
+    it("Multiple exchange rates can apply within same cap", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
             const batchPrice = minSale.div(4);
             return crowdsale.updateExchangeRate(0, minCap.div(2).sub(1), batchPrice).catch(function(error) {
