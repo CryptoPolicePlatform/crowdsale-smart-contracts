@@ -92,11 +92,12 @@ contract CryptoPoliceCrowdsale is Ownable {
 
         uint tokens;
         uint weiExchanged;
+        uint weiRemaining = weiSent;
 
         while (true) {
             var (batchSize, batchPrice) = exchangeRate();
             
-            uint batches = weiSent / batchPrice;
+            uint batches = weiRemaining / batchPrice;
             uint tokenAmount = batches.mul(batchSize);
             uint stageCap = getStageCap();
             
@@ -108,31 +109,32 @@ contract CryptoPoliceCrowdsale is Ownable {
                 batches = remainder / batchSize;
 
                 if (batches > 0) {
-                    tokens = tokens + batches;
+                    tokens = tokens + batches * batchSize;
                     weiExchanged = batches * batchPrice;
+                    weiRemaining = weiRemaining - weiExchanged;
                     tokensExchanged = tokensExchanged + tokens;
                 }
+
+                enterNextStage();
 
                 if (stageCap == HARD_CAP) {
                     state = CrowdsaleState.SoldOut;
                     break;
                 }
-
-                enterNextStage();
+                
                 continue;
             }
 
             tokens = tokens + tokenAmount;
             weiExchanged = batches * batchPrice;
+            weiRemaining = weiRemaining - weiExchanged;
             tokensExchanged = tokensExchanged + tokens;
             
             break;
         }
-        
-        uint weiNotExchanged = weiSent - weiExchanged;
 
-        if (weiNotExchanged > 0) {
-            sender.transfer(weiNotExchanged);
+        if (weiRemaining > 0) {
+            sender.transfer(weiRemaining);
         }
 
         weiSpent[sender] = weiSpent[sender] + weiExchanged;
@@ -309,9 +311,9 @@ contract CryptoPoliceCrowdsale is Ownable {
             stage = CrowdsaleStage.Sale;
         } else if (stage == CrowdsaleStage.Sale) {
             stage = CrowdsaleStage.LastChance;
+        } else {
+            assert(false);
         }
-
-        assert(false);
     }
 
     function trySuspend(address sender, uint weiSent) internal returns (bool) {
