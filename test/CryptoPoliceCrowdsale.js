@@ -81,7 +81,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
             return crowdsale.updateExchangeRate(0, minCap.div(2).sub(1), batchPrice).catch(function(error) {
                 Assert.ok(false, error.message);
             }).then(function() {
-                return crowdsale.updateExchangeRate(2, 1, batchPrice).catch(function(error) {
+                return crowdsale.updateExchangeRate(1, 1, batchPrice).catch(function(error) {
                     Assert.ok(false, error.message);
                 }).then(function() {
                     return crowdsale.sendTransaction({
@@ -120,7 +120,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     });
     it("Payment is rejected after crowdsale is ended", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.updateExchangeRate(2, minCap, minSale).catch(errorCallback).then(function() {
+            return crowdsale.updateExchangeRate(1, minCap, minSale).catch(errorCallback).then(function() {
                 return crowdsale.sendTransaction({
                     from: accounts[2],
                     value: minSale
@@ -137,9 +137,9 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         const sale = minSale.div(4);
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
             return crowdsale.updateExchangeRate(0, minCap, sale).catch(errorCallback).then(function() {
-                return crowdsale.updateExchangeRate(2, softCap, sale).catch(errorCallback).then(function() {
-                    return crowdsale.updateExchangeRate(3, powerCap, sale).catch(errorCallback).then(function() {
-                        return crowdsale.updateExchangeRate(4, hardCap, sale).catch(errorCallback).then(function() {
+                return crowdsale.updateExchangeRate(1, softCap, sale).catch(errorCallback).then(function() {
+                    return crowdsale.updateExchangeRate(2, powerCap, sale).catch(errorCallback).then(function() {
+                        return crowdsale.updateExchangeRate(3, hardCap, sale).catch(errorCallback).then(function() {
                             return crowdsale.sendTransaction({
                                 from: accounts[1],
                                 value: minSale
@@ -163,7 +163,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     it("Ethereum that is not exchanged is returned to sender", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
             return crowdsale.updateExchangeRate(0, minCap, minSale.sub(10)).catch(errorCallback).then(function() {
-                return crowdsale.updateExchangeRate(2, minCap, minSale).catch(errorCallback).then(function() {
+                return crowdsale.updateExchangeRate(1, minCap, minSale).catch(errorCallback).then(function() {
                     const balanceBefore = web3.eth.getBalance(accounts[1]);
                     return crowdsale.sendTransaction({
                         from: accounts[1],
