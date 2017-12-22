@@ -61,6 +61,8 @@ contract CryptoPoliceCrowdsale is Ownable {
 
     mapping(address => uint) public suspended;
 
+    mapping(address => uint) public reservedTokens;
+
     /**
      * Map stage to its corresponding exchange rate
      */
@@ -144,7 +146,15 @@ contract CryptoPoliceCrowdsale is Ownable {
         weiSpent[sender] = weiSpent[sender] + weiExchanged;
         weiRaised = weiRaised + weiExchanged;
 
-        require(token.transferFrom(owner, sender, tokens));
+        if (stage == CrowdsaleStage.TokenReservation) {
+            reservedTokens[sender] = reservedTokens[sender].add(tokens);
+        } else {
+            transferTokens(sender, tokens);
+        }
+    }
+
+    function transferTokens(address recipient, uint amount) internal {
+        require(token.transferFrom(owner, recipient, amount));
     }
 
     /**
@@ -238,6 +248,16 @@ contract CryptoPoliceCrowdsale is Ownable {
 
     function updateMinSale(uint weiAmount) public grantOwner {
         minSale = weiAmount;
+    }
+
+    function transferReservedTokens(address recipient) public grantOwner {
+        uint amount = reservedTokens[recipient];
+
+        require(amount > 0);
+
+        reservedTokens[recipient] = 0;
+        
+        transferTokens(recipient, amount);
     }
 
     /**
