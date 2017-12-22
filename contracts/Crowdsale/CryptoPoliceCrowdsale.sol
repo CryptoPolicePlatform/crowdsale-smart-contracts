@@ -93,31 +93,31 @@ contract CryptoPoliceCrowdsale is Ownable {
         uint tokens;
         uint weiExchanged;
         uint weiRemaining = weiSent;
+        uint goal = getCurrentGoal();
 
         while (true) {
-            var (batchSize, batchPrice) = exchangeRate();
+            ExchangeRate memory rate = getExchangeRate(goal);
             
-            uint batches = weiRemaining / batchPrice;
-            uint tokenAmount = batches.mul(batchSize);
-            uint stageCap = getStageCap();
+            uint batches = weiRemaining / rate.price;
+            uint tokenAmount = batches.mul(rate.tokens);
             
-            if (tokenAmount > stageCap) {
+            if (tokenAmount > goal) {
                 // we have to exchange remainder for current rate
-                uint remainder = stageCap - tokensExchanged;
+                uint remainder = goal - tokensExchanged;
 
                 // how many tokens can be exchanged
-                batches = remainder / batchSize;
+                batches = remainder / rate.tokens;
 
                 if (batches > 0) {
-                    tokens = tokens + batches * batchSize;
-                    weiExchanged = batches * batchPrice;
+                    tokens = tokens + batches * rate.tokens;
+                    weiExchanged = batches * rate.price;
                     weiRemaining = weiRemaining - weiExchanged;
                     tokensExchanged = tokensExchanged + tokens;
                 }
 
-                enterNextStage();
+                goal = getNextGoal(goal);
 
-                if (stageCap == HARD_CAP) {
+                if (goal == HARD_CAP) {
                     state = CrowdsaleState.SoldOut;
                     break;
                 }
@@ -126,11 +126,11 @@ contract CryptoPoliceCrowdsale is Ownable {
             }
 
             tokens = tokens + tokenAmount;
-            weiExchanged = batches * batchPrice;
+            weiExchanged = batches * rate.price;
             weiRemaining = weiRemaining - weiExchanged;
             tokensExchanged = tokensExchanged + tokens;
             
-            if (stageCap == HARD_CAP) {
+            if (goal == HARD_CAP) {
                 state = CrowdsaleState.SoldOut;
             }
 
@@ -270,52 +270,81 @@ contract CryptoPoliceCrowdsale is Ownable {
         }
     }
 
-    function updateExchangeRate(CrowdsaleStage _stage, uint tokens, uint price) public grantOwner {
+    function updateExchangeRate(uint8 idx, uint tokens, uint price) public grantOwner {
         require(tokens > 0 && price > 0);
+        require(idx >= 0 && idx <= 3);
 
-        exchangeRates[uint8(_stage)] = ExchangeRate({
+        exchangeRates[idx] = ExchangeRate({
             tokens: tokens,
             price: price
         });
     }
 
-    /**
-     * Defines number of tokens and associated price in exchange
-     */
-    function exchangeRate()
-        internal view
-        returns (uint batchSize, uint batchPrice)
-    {
-        ExchangeRate storage rate = exchangeRates[uint8(stage)];
+    function getExchangeRate(uint currentGoal) internal view returns (ExchangeRate) {
+        uint8 idxC = capRateIndexMapping(currentGoal);
+        uint8 idxS = stageRateIndexMapping();
+        uint8 idx = idxC > idxS ? idxC : idxS;
+
+        ExchangeRate storage rate = exchangeRates[idx];
 
         require(rate.tokens > 0 && rate.price > 0);
 
-        batchSize = rate.tokens;
-        batchPrice = rate.price;
+        return rate;
     }
 
-    function getStageCap() internal view returns (uint) {
-        if (stage == CrowdsaleStage.TokenReservation || stage == CrowdsaleStage.ClosedPresale) {
+    function getCurrentGoal() internal view returns (uint) {
+        if (tokensExchanged < MIN_CAP) {
             return MIN_CAP;
-        } else if (stage == CrowdsaleStage.PublicPresale) {
+        } else if (tokensExchanged < SOFT_CAP) {
             return SOFT_CAP;
-        } else if (stage == CrowdsaleStage.Sale) {
+        } else if (tokensExchanged < POWER_CAP) {
             return POWER_CAP;
-        } else if (stage == CrowdsaleStage.LastChance) {
+        } else if (tokensExchanged < HARD_CAP) {
             return HARD_CAP;
         }
 
         assert(false);
     }
 
-    function enterNextStage() internal {
-        if (stage == CrowdsaleStage.TokenReservation || stage == CrowdsaleStage.ClosedPresale) {
-            stage = CrowdsaleStage.PublicPresale;
-        } else if (stage == CrowdsaleStage.PublicPresale) {
-            stage = CrowdsaleStage.Sale;
-        } else if (stage == CrowdsaleStage.Sale) {
-            stage = CrowdsaleStage.LastChance;
+    function getNextGoal(uint currentGoal) internal view returns (uint) {
+        if (currentGoal == MIN_CAP) {
+            return SOFT_CAP;
+        } else if (tokensExchanged == SOFT_CAP) {
+            return POWER_CAP;
+        } else if (tokensExchanged == POWER_CAP) {
+            return HARD_CAP;
         }
+        
+        assert(false);
+    }
+
+    function stageRateIndexMapping() internal view returns (uint8) {
+        if (stage == CrowdsaleStage.TokenReservation || stage == CrowdsaleStage.ClosedPresale) {
+            return 0;
+        } else if (stage == CrowdsaleStage.PublicPresale) {
+            return 1;
+        } else if (stage == CrowdsaleStage.Sale) {
+            return 2;
+        } else if (stage == CrowdsaleStage.LastChance) {
+            return 3;
+        }
+
+        assert(false);
+    }
+
+    function capRateIndexMapping(uint currentGoal) internal pure returns (uint8) {
+        if (currentGoal <= MIN_CAP) {
+            return 0;
+        } else if (currentGoal <= SOFT_CAP) {
+            return 1;
+        } else if (currentGoal <= POWER_CAP) {
+            return 2;
+        } else if (currentGoal > POWER_CAP && currentGoal < HARD_CAP) {
+            return 3;
+        }
+
+        // at this point hard cap is reached
+        assert(false);
     }
 
     function trySuspend(address sender, uint weiSent) internal returns (bool) {
