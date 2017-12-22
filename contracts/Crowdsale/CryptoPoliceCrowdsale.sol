@@ -326,12 +326,12 @@ contract CryptoPoliceCrowdsale is Ownable {
         assert(false);
     }
 
-    function getNextGoal(uint currentGoal) internal view returns (uint) {
+    function getNextGoal(uint currentGoal) internal pure returns (uint) {
         if (currentGoal == MIN_CAP) {
             return SOFT_CAP;
-        } else if (tokensExchanged == SOFT_CAP) {
+        } else if (currentGoal == SOFT_CAP) {
             return POWER_CAP;
-        } else if (tokensExchanged == POWER_CAP) {
+        } else if (currentGoal == POWER_CAP) {
             return HARD_CAP;
         }
         
