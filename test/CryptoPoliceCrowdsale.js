@@ -221,7 +221,3 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         }).catch(errorCallback);
     })
 });
-
-// TODO
-// 1) Token reservation
-// 2) Admin processes reserved tokens
