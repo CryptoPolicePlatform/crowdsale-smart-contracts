@@ -118,6 +118,18 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
             });
         })
     });
+    it("Payment is rejected after crowdsale is ended", function() {
+        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+            return crowdsale.updateExchangeRate(2, minCap, minSale).catch(errorCallback).then(function() {
+                return crowdsale.sendTransaction({
+                    from: accounts[2],
+                    value: minSale
+                }).then(function() {
+                    Assert.ok(false, "Transaction was not rejected");
+                }).catch(revertCallback);
+            });
+        })
+    });
 });
 contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
