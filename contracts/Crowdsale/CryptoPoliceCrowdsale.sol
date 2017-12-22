@@ -130,6 +130,10 @@ contract CryptoPoliceCrowdsale is Ownable {
             weiRemaining = weiRemaining - weiExchanged;
             tokensExchanged = tokensExchanged + tokens;
             
+            if (stageCap == HARD_CAP) {
+                state = CrowdsaleState.SoldOut;
+            }
+
             break;
         }
 
@@ -311,8 +315,6 @@ contract CryptoPoliceCrowdsale is Ownable {
             stage = CrowdsaleStage.Sale;
         } else if (stage == CrowdsaleStage.Sale) {
             stage = CrowdsaleStage.LastChance;
-        } else {
-            assert(false);
         }
     }
 
