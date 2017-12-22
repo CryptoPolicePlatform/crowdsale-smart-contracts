@@ -185,6 +185,42 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         })
     });
 });
+contract('CryptoPoliceCrowdsale', function(accounts) {
+    before(startCrowdsale);
+    it("Tokens are reserved", function() {
+        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+            return crowdsale.updateExchangeRate(0, minCap, minSale).catch(errorCallback).then(function() {
+                return crowdsale.sendTransaction({
+                    from: accounts[1],
+                    value: minSale
+                }).then(function() {
+                    return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                        return token.balanceOf.call(accounts[1]).then(function(balance) {
+                            Assert.equal(balance.toString(), "0", "After tokens are reserved balance should not change");
+                            return crowdsale.reservedTokens.call(accounts[1]).then(function(amount) {
+                                Assert.equal(amount.toString(), minCap.toString(), "Invalid amount of tokens reserved")
+                            }).catch(errorCallback)
+                        }).catch(errorCallback)
+                    })
+                }).catch(errorCallback);
+            })
+        })
+    });
+    it("Owner transfers reserved tokens", function() {
+        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+            return crowdsale.transferReservedTokens(accounts[1]).then(function() {
+                return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                    return token.balanceOf.call(accounts[1]).then(function(balance) {
+                        Assert.equal(balance.toString(), minCap.toString(), "Tokens were not transfered correctly");
+                        return crowdsale.reservedTokens.call(accounts[1]).then(function(amount) {
+                            Assert.equal(amount.toString(), "0", "After token transfer reserved number of tokens should be zero")
+                        }).catch(errorCallback)
+                    }).catch(errorCallback)
+                })
+            })
+        }).catch(errorCallback);
+    })
+});
 
 // TODO
 // 1) Token reservation
