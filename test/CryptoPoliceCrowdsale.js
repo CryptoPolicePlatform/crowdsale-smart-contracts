@@ -11,9 +11,6 @@ const hardCap = new BigNumber("400000000e+18");
 const minSale = new BigNumber("1e+16");
 const gasPrice = 10000000000;
 
-const errorCallback = function(error) {
-    Assert.ok(false, error.message);
-};
 const revertCallback = function(error) {
     Assert.ok(error.message.includes('revert'));
 };
@@ -42,7 +39,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         });
         it("Admin can update exchange rate", function() {
             return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-                return crowdsale.updateExchangeRate(0, 1, 1).catch(errorCallback)
+                return crowdsale.updateExchangeRate(0, 1, 1)
             })
         });
         it("Payment less that minimum sale is rejected", function() {
@@ -69,7 +66,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                                 Assert.equal(minSale.toString(), tokenCount.toString());
                             })
                         })
-                    }).catch(errorCallback);
+                    })
                 })
             })
         });
@@ -96,7 +93,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                                     Assert.equal(tokenCount.toString(), minCap.toString());
                                 })
                             })
-                        }).catch(errorCallback);
+                        })
                     })
                 })
             })
@@ -107,7 +104,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
     it("Funds are transfered to owner after crowdsale is ended successfully", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.updateExchangeRate(0, minCap, minSale).catch(errorCallback).then(function() {
+            return crowdsale.updateExchangeRate(0, minCap, minSale).then(function() {
                 return crowdsale.sendTransaction({
                     from: accounts[1],
                     value: minSale
@@ -117,14 +114,14 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                         const balanceAfter = web3.eth.getBalance(accounts[0]);
                         const expectedBalance = balanceBefore.sub(tx.receipt.gasUsed * gasPrice).add(minSale);
                         Assert.equal(balanceAfter.toString(), expectedBalance.toString());
-                    }).catch(errorCallback);
-                }).catch(errorCallback);
+                    })
+                })
             });
         })
     });
     it("Payment is rejected after crowdsale is ended", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.updateExchangeRate(1, minCap, minSale).catch(errorCallback).then(function() {
+            return crowdsale.updateExchangeRate(1, minCap, minSale).then(function() {
                 return crowdsale.sendTransaction({
                     from: accounts[2],
                     value: minSale
@@ -140,10 +137,10 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     it("Payment is rejected after hard cap is reached", function() {
         const sale = minSale.div(4);
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.updateExchangeRate(0, minCap, sale).catch(errorCallback).then(function() {
-                return crowdsale.updateExchangeRate(1, softCap, sale).catch(errorCallback).then(function() {
-                    return crowdsale.updateExchangeRate(2, powerCap, sale).catch(errorCallback).then(function() {
-                        return crowdsale.updateExchangeRate(3, hardCap, sale).catch(errorCallback).then(function() {
+            return crowdsale.updateExchangeRate(0, minCap, sale).then(function() {
+                return crowdsale.updateExchangeRate(1, softCap, sale).then(function() {
+                    return crowdsale.updateExchangeRate(2, powerCap, sale).then(function() {
+                        return crowdsale.updateExchangeRate(3, hardCap, sale).then(function() {
                             return crowdsale.startClosedPresaleStage().then(function () {
                                 return crowdsale.sendTransaction({
                                     from: accounts[1],
@@ -155,7 +152,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                                     }).then(function() {
                                         Assert.ok(false, "Transaction was not rejected");
                                     }).catch(revertCallback)
-                                }).catch(errorCallback);
+                                })
                             });
                         });
                     });
@@ -168,8 +165,8 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
     it("Ethereum that is not exchanged is returned to sender", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.updateExchangeRate(0, minCap, minSale.sub(10)).catch(errorCallback).then(function() {
-                return crowdsale.updateExchangeRate(1, minCap, minSale).catch(errorCallback).then(function() {
+            return crowdsale.updateExchangeRate(0, minCap, minSale.sub(10)).then(function() {
+                return crowdsale.updateExchangeRate(1, minCap, minSale).then(function() {
                     const balanceBefore = web3.eth.getBalance(accounts[1]);
                     return crowdsale.sendTransaction({
                         from: accounts[1],
@@ -179,7 +176,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                         const balanceAfter = web3.eth.getBalance(accounts[1]);
                         const expected = balanceBefore.sub(tx.receipt.gasUsed * gasPrice).sub(minSale).add(10);
                         Assert.equal(balanceAfter.toString(), expected.toString())
-                    }).catch(errorCallback);
+                    })
                 })
             });
         })
@@ -189,7 +186,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
     it("Tokens are reserved", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.updateExchangeRate(0, minCap, minSale).catch(errorCallback).then(function() {
+            return crowdsale.updateExchangeRate(0, minCap, minSale).then(function() {
                 return crowdsale.sendTransaction({
                     from: accounts[1],
                     value: minSale
@@ -199,10 +196,10 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                             Assert.equal(balance.toString(), "0", "After tokens are reserved balance should not change");
                             return crowdsale.reservedTokens.call(accounts[1]).then(function(amount) {
                                 Assert.equal(amount.toString(), minCap.toString(), "Invalid amount of tokens reserved")
-                            }).catch(errorCallback)
-                        }).catch(errorCallback)
+                            })
+                        })
                     })
-                }).catch(errorCallback);
+                })
             })
         })
     });
@@ -214,10 +211,46 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                         Assert.equal(balance.toString(), minCap.toString(), "Tokens were not transfered correctly");
                         return crowdsale.reservedTokens.call(accounts[1]).then(function(amount) {
                             Assert.equal(amount.toString(), "0", "After token transfer reserved number of tokens should be zero")
-                        }).catch(errorCallback)
-                    }).catch(errorCallback)
+                        })
+                    })
                 })
             })
-        }).catch(errorCallback);
+        })
+    })
+});
+contract('CryptoPoliceCrowdsale', function(accounts) {
+    before(startCrowdsale);
+    it("Burn leftover tokens in various portions", function() {
+        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+            return crowdsale.startClosedPresaleStage().then(function () {
+                return crowdsale.updateExchangeRate(0, minCap, minSale).then(function() {
+                    return crowdsale.sendTransaction({
+                        from: accounts[1],
+                        value: minSale
+                    }).then(function() {
+                        return crowdsale.endCrowdsale(true).then(function() {
+                            return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                                return token.grantBurn(crowdsale.address).then(function() {
+                                    return token.totalSupply.call().then(function(originalSupply) {
+                                        return crowdsale.burnLeftoverTokens(50).then(function() {
+                                            return token.totalSupply.call().then(function(supply) {
+                                                const expected = originalSupply.sub(hardCap.sub(minCap).div(2));
+                                                Assert.equal(supply.toString(), expected.toString());
+                                                return crowdsale.burnLeftoverTokens(100).then(function() {
+                                                    return token.totalSupply.call().then(function(supply) {
+                                                        const expected = originalSupply.sub(hardCap.sub(minCap));
+                                                        Assert.equal(supply.toString(), expected.toString());
+                                                    })
+                                                })
+                                            })
+                                        })
+                                    })
+                                })
+                            })
+                        })
+                    })
+                })
+            })
+        });
     })
 });
