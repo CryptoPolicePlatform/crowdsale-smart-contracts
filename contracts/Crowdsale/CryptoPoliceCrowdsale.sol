@@ -282,10 +282,10 @@ contract CryptoPoliceCrowdsale is Ownable {
         require(state == CrowdsaleState.Ended);
         require(percentage <= 100 && percentage > 0);
 
-        uint tokensRemaining = HARD_CAP - tokensExchanged;
+        uint balance = token.balanceOf(address(this));
 
-        if (tokensRemaining > 0) {
-            uint amount = percentage / 100 * tokensRemaining;
+        if (balance > 0) {
+            uint amount = balance / (100 / percentage);
             token.burn(amount);
         }
     }
