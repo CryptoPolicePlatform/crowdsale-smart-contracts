@@ -10,6 +10,7 @@ const powerCap = new BigNumber("160000000e+18");
 const hardCap = new BigNumber("400000000e+18");
 const minSale = new BigNumber("1e+16");
 const gasPrice = 10000000000;
+const maxUnidentifiedInvestment = minSale.add(1);
 
 const revertCallback = function(error) {
     Assert.ok(error.message.includes('revert'));
@@ -253,4 +254,74 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
             })
         });
     })
+});contract('CryptoPoliceCrowdsale', function(accounts) {
+    before(startCrowdsale);
+    it("Burn leftover tokens in various portions", function() {
+        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+            return crowdsale.startClosedPresaleStage().then(function () {
+                return crowdsale.updateExchangeRate(0, minCap, minSale).then(function() {
+                    return crowdsale.sendTransaction({
+                        from: accounts[1],
+                        value: minSale
+                    }).then(function() {
+                        return crowdsale.endCrowdsale(true).then(function() {
+                            return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                                return token.grantBurn(crowdsale.address).then(function() {
+                                    return token.totalSupply.call().then(function(originalSupply) {
+                                        return crowdsale.burnLeftoverTokens(50).then(function() {
+                                            return token.totalSupply.call().then(function(supply) {
+                                                const expected = originalSupply.sub(hardCap.sub(minCap).div(2));
+                                                Assert.equal(supply.toString(), expected.toString());
+                                                return crowdsale.burnLeftoverTokens(100).then(function() {
+                                                    return token.totalSupply.call().then(function(supply) {
+                                                        const expected = originalSupply.sub(hardCap.sub(minCap));
+                                                        Assert.equal(supply.toString(), expected.toString());
+                                                    })
+                                                })
+                                            })
+                                        })
+                                    })
+                                })
+                            })
+                        })
+                    })
+                })
+            })
+        });
+    })
 });
+
+contract('CryptoPoliceCrowdsale', function(accounts) {
+    before(startCrowdsale);
+    it("Large exchange happens only after transaction is verified", function() {
+        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+            return crowdsale.startClosedPresaleStage().then(function () {
+                return crowdsale.updateExchangeRate(0, minCap, maxUnidentifiedInvestment.add(1)).then(function() {
+                    return crowdsale.updateMaxUnidentifiedInvestment(maxUnidentifiedInvestment).then(function() {
+                        return crowdsale.sendTransaction({
+                            from: accounts[1],
+                            value: maxUnidentifiedInvestment.add(1)
+                        }).then(function() {
+                            return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                                return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
+                                    Assert.equal("0", tokenCount.toString());
+                                    return crowdsale.markAddressIdentified(accounts[1]).then(function() {
+                                        return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
+                                            Assert.equal(minCap.toString(), tokenCount.toString());
+                                        })
+                                    })
+                                })
+                            })
+                        })
+                    })
+                })
+            })
+        });
+    })
+});
+
+// TODO
+// Pause
+// proxy exchange
+// refund after unsuccessful crowdsale
+// refund unverified payment
