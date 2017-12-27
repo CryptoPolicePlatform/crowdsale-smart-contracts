@@ -343,9 +343,50 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
             })
         });
     })
+});contract('CryptoPoliceCrowdsale', function(accounts) {
+    before(startCrowdsale);
+    it("Return suspended funds once", function() {
+        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+            return crowdsale.startClosedPresaleStage().then(function () {
+                const transferAmount = maxUnidentifiedInvestment.add(1);
+                return crowdsale.updateExchangeRate(0, minCap, transferAmount).then(function() {
+                    return crowdsale.updateMaxUnidentifiedInvestment(maxUnidentifiedInvestment).then(function() {
+                        return crowdsale.sendTransaction({
+                            from: accounts[1],
+                            value: transferAmount
+                        }).then(function() {
+                            const balanceBefore = web3.eth.getBalance(accounts[1]);
+                            return crowdsale.returnSuspendedFunds(accounts[1]).then(function() {
+                                const balanceAfter = web3.eth.getBalance(accounts[1]);
+                                const expectedBalance = balanceBefore.add(transferAmount);
+                                Assert.equal(balanceAfter.toString(), expectedBalance.toString());
+                                return crowdsale.returnSuspendedFunds(accounts[1]).catch(revertCallback)
+                            })
+                        })
+                    })
+                })
+            })
+        });
+    })
+});
+contract('CryptoPoliceCrowdsale', function(accounts) {
+    before(startCrowdsale);
+    it("Payment is rejected on paused crowdsale", function() {
+        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+            return crowdsale.startClosedPresaleStage().then(function () {
+                return crowdsale.updateExchangeRate(0, minCap, minSale).then(function() {
+                    return crowdsale.pauseCrowdsale().then(function() {
+                        return crowdsale.sendTransaction({
+                            from: accounts[1],
+                            value: minSale
+                        }).catch(revertCallback)
+                    })
+                })
+            })
+        });
+    })
 });
 
 // TODO
-// Pause
 // proxy exchange
 // refund after unsuccessful crowdsale
