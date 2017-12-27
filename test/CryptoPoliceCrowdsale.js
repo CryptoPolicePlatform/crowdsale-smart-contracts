@@ -61,7 +61,8 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                     }).then(function(tx) {
                         const balanceAfter = web3.eth.getBalance(accounts[1]);
                         const calculatedBalanceAfter = balanceBefore.minus(minSale).minus(gasPrice * tx.receipt.gasUsed);
-                        Assert.equal(balanceAfter.toString(), calculatedBalanceAfter.toString(), "Balance mismatch after ether sent");
+                        Assert.equal(balanceAfter.toString(), calculatedBalanceAfter.toString(),
+                            "Balance mismatch after ether sent");
                         return CryptoPoliceOfficerToken.deployed().then(function(token) {
                             return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
                                 Assert.equal(minSale.toString(), tokenCount.toString());
@@ -386,7 +387,24 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         });
     })
 });
+contract('CryptoPoliceCrowdsale', function(accounts) {
+    before(startCrowdsale);
+    it("Proxy exchange", function() {
+        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+            return crowdsale.startClosedPresaleStage().then(function () {
+                return crowdsale.updateExchangeRate(0, minCap, minSale).then(function() {
+                    return crowdsale.proxyExchange(accounts[1], minSale).then(function() {
+                        return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                            return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
+                                Assert.equal(minCap.toString(), tokenCount.toString());
+                            })
+                        })
+                    })
+                })
+            })
+        })
+    });
+});
 
 // TODO
-// proxy exchange
 // refund after unsuccessful crowdsale
