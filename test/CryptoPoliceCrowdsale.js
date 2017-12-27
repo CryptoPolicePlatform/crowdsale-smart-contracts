@@ -405,6 +405,51 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         })
     });
 });
-
-// TODO
-// refund after unsuccessful crowdsale
+contract('CryptoPoliceCrowdsale', function(accounts) {
+    before(function() {
+        return startCrowdsale().then(function() {
+            return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+                return crowdsale.startClosedPresaleStage().then(function() {
+                    return crowdsale.updateExchangeRate(0, 1, minSale).then(function() {
+                        return crowdsale.sendTransaction({
+                            from: accounts[1],
+                            value: minSale
+                        }).then(function() {
+                            return crowdsale.sendTransaction({
+                                from: accounts[2],
+                                value: minSale
+                            }).then(function() {
+                                return crowdsale.endCrowdsale(false)
+                            })
+                        })
+                    })
+                })
+            })
+        })
+    });
+    describe("Refund after unsuccessful crowdsale", function() {
+        it("Issue manual refund with payment method", function() {
+            return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+                const balnace1AfterTx = web3.eth.getBalance(accounts[1]);
+                return crowdsale.sendTransaction({
+                    from: accounts[1],
+                    value: 1,
+                    gasPrice: gasPrice
+                }).then(function(tx) {
+                    const balance1AfterRefund = web3.eth.getBalance(accounts[1]);
+                    const balance1Expected = balnace1AfterTx.add(minSale).minus(gasPrice * tx.receipt.gasUsed);
+                    Assert.equal(balance1AfterRefund.toString(), balance1Expected.toString());
+                })
+            })
+        });
+        it("Refund by admin", function() {
+            return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+                const balnace2AfterTx = web3.eth.getBalance(accounts[2]);
+                return crowdsale.refund(accounts[2]).then(function() {
+                    const balance2AfterRefund = web3.eth.getBalance(accounts[2]);
+                    Assert.equal(balance2AfterRefund.toString(), balnace2AfterTx.toString());
+                })
+            })
+        })
+    })
+});
