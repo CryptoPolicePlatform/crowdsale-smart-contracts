@@ -227,9 +227,10 @@ contract CryptoPoliceCrowdsale is Ownable {
     }
 
     function returnSuspendedFunds(address _address) public grantOwner {
-        if (suspended[_address] > 0) {
-            _address.transfer(suspended[_address]);
-        }
+        require(suspended[_address] > 0);
+        uint amount = suspended[_address];
+        suspended[_address] = 0;
+        _address.transfer(amount);
     }
 
     function transferFunds(address recipient, uint weiAmount) public grantOwner {
