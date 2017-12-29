@@ -3,14 +3,7 @@ const CryptoPoliceCrowdsale = artifacts.require("CryptoPoliceCrowdsale");
 const CryptoPoliceOfficerToken = artifacts.require("CryptoPoliceOfficerToken");
 const Assert = require('assert');
 const BigNumber = require('bignumber.js');
-
-const minCap = new BigNumber("12500000e+18");
-const softCap = new BigNumber("40000000e+18");
-const powerCap = new BigNumber("160000000e+18");
-const hardCap = new BigNumber("400000000e+18");
-const minSale = new BigNumber("1e+16");
-const gasPrice = 10000000000;
-const maxUnidentifiedInvestment = minSale.add(1);
+require('./../helpers/constants');
 
 const revertCallback = function(error) {
     Assert.ok(error.message.includes('revert'));
