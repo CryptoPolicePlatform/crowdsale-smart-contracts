@@ -248,41 +248,6 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
             })
         });
     })
-});contract('CryptoPoliceCrowdsale', function(accounts) {
-    before(startCrowdsale);
-    it("Burn leftover tokens in various portions", function() {
-        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.startClosedPresaleStage().then(function () {
-                return crowdsale.updateExchangeRate(0, minCap, minSale).then(function() {
-                    return crowdsale.sendTransaction({
-                        from: accounts[1],
-                        value: minSale
-                    }).then(function() {
-                        return crowdsale.endCrowdsale(true).then(function() {
-                            return CryptoPoliceOfficerToken.deployed().then(function(token) {
-                                return token.grantBurn(crowdsale.address).then(function() {
-                                    return token.totalSupply.call().then(function(originalSupply) {
-                                        return crowdsale.burnLeftoverTokens(50).then(function() {
-                                            return token.totalSupply.call().then(function(supply) {
-                                                const expected = originalSupply.sub(hardCap.sub(minCap).div(2));
-                                                Assert.equal(supply.toString(), expected.toString());
-                                                return crowdsale.burnLeftoverTokens(100).then(function() {
-                                                    return token.totalSupply.call().then(function(supply) {
-                                                        const expected = originalSupply.sub(hardCap.sub(minCap));
-                                                        Assert.equal(supply.toString(), expected.toString());
-                                                    })
-                                                })
-                                            })
-                                        })
-                                    })
-                                })
-                            })
-                        })
-                    })
-                })
-            })
-        });
-    })
 });
 contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
@@ -313,31 +278,6 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     })
 });
 contract('CryptoPoliceCrowdsale', function(accounts) {
-    before(startCrowdsale);
-    it("Return suspended funds once", function() {
-        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.startClosedPresaleStage().then(function () {
-                const transferAmount = maxUnidentifiedInvestment.add(1);
-                return crowdsale.updateExchangeRate(0, minCap, transferAmount).then(function() {
-                    return crowdsale.updateMaxUnidentifiedInvestment(maxUnidentifiedInvestment).then(function() {
-                        return crowdsale.sendTransaction({
-                            from: accounts[1],
-                            value: transferAmount
-                        }).then(function() {
-                            const balanceBefore = web3.eth.getBalance(accounts[1]);
-                            return crowdsale.returnSuspendedFunds(accounts[1]).then(function() {
-                                const balanceAfter = web3.eth.getBalance(accounts[1]);
-                                const expectedBalance = balanceBefore.add(transferAmount);
-                                Assert.equal(balanceAfter.toString(), expectedBalance.toString());
-                                return crowdsale.returnSuspendedFunds(accounts[1]).catch(revertCallback)
-                            })
-                        })
-                    })
-                })
-            })
-        });
-    })
-});contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
     it("Return suspended funds once", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
