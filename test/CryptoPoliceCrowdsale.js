@@ -65,6 +65,47 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                 })
             })
         });
+        describe("Before public token transfer is enabled", function() {
+            it("Token transfer is rejected", function() {
+                return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                    return token.transfer(accounts[2], 1, { from: accounts[1] }).catch(revertCallback);
+                })
+            });
+            it("Token transfer via allowance is rejected", function() {
+                return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                    return token.approve(accounts[2], 1, { from: accounts[1] }).then(function() {
+                        return token.transferFrom(accounts[1], accounts[3], 1, { from: accounts[2] }).catch(revertCallback);
+                    })
+                })
+            });
+            it("Owner enables public token transfer", function() {
+                return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                    return token.enablePublicTransfers()
+                }) 
+            });
+        });
+        describe("After token transfer is enabled", function() {
+            it("Can transfer tokens", function() {
+                return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                    return token.transfer(accounts[2], 1, { from: accounts[1] }).then(function(){
+                        return token.balanceOf.call(accounts[2]).then(function(tokenCount) {
+                            Assert.equal(tokenCount.toString(), 1);
+                        })
+                    })
+                })
+            });
+            it("Can transfer tokens via allowance", function() {
+                return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                    return token.approve(accounts[2], 1, { from: accounts[1] }).then(function() {
+                        return token.transferFrom(accounts[1], accounts[3], 1, { from: accounts[2] }).then(function() {
+                            return token.balanceOf.call(accounts[3]).then(function(tokenCount) {
+                                Assert.equal(tokenCount.toString(), 1);
+                            })
+                        })
+                    })
+                })
+            });
+        });
     });
 });
 contract('CryptoPoliceCrowdsale', function(accounts) {
