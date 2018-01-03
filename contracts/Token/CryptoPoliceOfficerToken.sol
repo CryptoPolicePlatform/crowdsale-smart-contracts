@@ -110,14 +110,15 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         publicTransfersEnabled = true;
     }
 
-    function moneyBack(address _address) public {
+    function returnTokens(address _address) public returns (uint) {
         require(isCrowdsale());
         require(publicTransfersEnabled == false);
         uint balance = balanceOf(_address);
         require(balance > 0);
         balances[_address] = 0;
-        balances[crowdsaleContract].add(balance);
+        balances[crowdsaleContract] = balances[crowdsaleContract].add(balance);
         Transfer(_address, crowdsaleContract, balance);
+        return balance;
     }
 
     modifier whenTransferable {

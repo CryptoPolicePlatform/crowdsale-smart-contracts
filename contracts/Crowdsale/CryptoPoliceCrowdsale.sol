@@ -315,7 +315,8 @@ contract CryptoPoliceCrowdsale is Ownable {
         uint refundAmount = weiSpent[_address];
         weiSpent[_address] = 0;
         _address.transfer(refundAmount);
-        token.moneyBack(_address);
+        uint tokenRefundAmount = token.returnTokens(_address);
+        tokensExchanged = tokensExchanged.sub(tokenRefundAmount);
     }
 
     function trySuspend(address sender, uint weiSent) internal returns (bool) {
