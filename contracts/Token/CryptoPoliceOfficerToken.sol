@@ -5,7 +5,6 @@ import "./TotalSupply.sol";
 import "./Burnable.sol";
 import "./Balance.sol";
 
-// TODO: Suspend all transfers
 // TODO: Suspend owner tokens for x number of days
 /// ERC20 compliant token contract
 contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
