@@ -373,7 +373,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
 });
 contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
-    describe("Owner issues money back", function() {
+    it("Owner issues money back", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
             return crowdsale.updateExchangeRate(0, 1, minSale).then(function() {
                 return crowdsale.sendTransaction({
@@ -381,16 +381,13 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                     value: minSale
                 }).then(function() {
                     return CryptoPoliceOfficerToken.deployed().then(function(token) {
-                        return token.balanceOf.call(accounts[0]).then(function(tokenBalanceBefore) {
-                            const ethBalanceBefore = web3.eth.getBalance(accounts[1]);
-                            return crowdsale.moneyBack(accounts[1]).then(function() {
-                                return token.balanceOf.call(accounts[0]).then(function(tokenBalanceAfter) {
-                                    const tokenBalanceExpected = tokenBalanceBefore.add(minSale);
-                                    Assert.equal(tokenBalanceAfter, tokenBalanceExpected);
-                                    const ethBalanceAfter = web3.eth.getBalance(accounts[1]);
-                                    const ethBalanceExpected = ethBalanceBefore.add(minSale);
-                                    Assert.equal(ethBalanceAfter, ethBalanceExpected);
-                                })
+                        const ethBalanceBefore = web3.eth.getBalance(accounts[1]);
+                        return crowdsale.moneyBack(accounts[1]).then(function() {
+                            return token.balanceOf.call(crowdsale.address).then(function(tokenBalanceAfter) {
+                                Assert.equal(tokenBalanceAfter.toString(), hardCap.toString());
+                                const ethBalanceAfter = web3.eth.getBalance(accounts[1]);
+                                const ethBalanceExpected = ethBalanceBefore.add(minSale);
+                                Assert.equal(ethBalanceAfter.toString(), ethBalanceExpected.toString());
                             })
                         })
                     })
