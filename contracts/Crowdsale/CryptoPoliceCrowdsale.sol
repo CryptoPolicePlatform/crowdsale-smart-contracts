@@ -4,7 +4,6 @@ import "./CrowdsaleToken.sol";
 import "../Utils/Ownable.sol";
 import "./../Utils/Math.sol";
 
-// TODO: Trim the contract
 // TODO: Gas price and limit
 // TODO: Test against common security issues
 // TODO: send back tokens to owner in case of failure?
@@ -309,6 +308,14 @@ contract CryptoPoliceCrowdsale is Ownable {
 
         // at this point hard cap is reached
         assert(false);
+    }
+    
+    function moneyBack(address _address) public notEnded grantOwner {
+        require(weiSpent[_address] > 0);
+        uint refundAmount = weiSpent[_address];
+        weiSpent[_address] = 0;
+        _address.transfer(refundAmount);
+        token.moneyBack(_address);
     }
 
     function trySuspend(address sender, uint weiSent) internal returns (bool) {
