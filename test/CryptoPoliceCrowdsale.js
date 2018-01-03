@@ -189,17 +189,15 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                     }).then(function() {
                         return crowdsale.endCrowdsale(true).then(function() {
                             return CryptoPoliceOfficerToken.deployed().then(function(token) {
-                                return token.grantBurn(crowdsale.address).then(function() {
-                                    return token.totalSupply.call().then(function(originalSupply) {
-                                        return crowdsale.burnLeftoverTokens(50).then(function() {
-                                            return token.totalSupply.call().then(function(supply) {
-                                                const expected = originalSupply.sub(hardCap.sub(minCap).div(2));
-                                                Assert.equal(supply.toString(), expected.toString());
-                                                return crowdsale.burnLeftoverTokens(100).then(function() {
-                                                    return token.totalSupply.call().then(function(supply) {
-                                                        const expected = originalSupply.sub(hardCap.sub(minCap));
-                                                        Assert.equal(supply.toString(), expected.toString());
-                                                    })
+                                return token.totalSupply.call().then(function(originalSupply) {
+                                    return crowdsale.burnLeftoverTokens(50).then(function() {
+                                        return token.totalSupply.call().then(function(supply) {
+                                            const expected = originalSupply.sub(hardCap.sub(minCap).div(2));
+                                            Assert.equal(supply.toString(), expected.toString());
+                                            return crowdsale.burnLeftoverTokens(100).then(function() {
+                                                return token.totalSupply.call().then(function(supply) {
+                                                    const expected = originalSupply.sub(hardCap.sub(minCap));
+                                                    Assert.equal(supply.toString(), expected.toString());
                                                 })
                                             })
                                         })
