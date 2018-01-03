@@ -4,6 +4,9 @@ import "./CrowdsaleToken.sol";
 import "../Utils/Ownable.sol";
 import "./../Utils/Math.sol";
 
+// TODO: Trim the contract
+// TODO: Gas price and limit
+// TODO: Test against common security issues
 // TODO: send back tokens to owner in case of failure?
 // TODO: Money back (Send tokens back to owner)
 contract CryptoPoliceCrowdsale is Ownable {
@@ -11,10 +14,6 @@ contract CryptoPoliceCrowdsale is Ownable {
 
     enum CrowdsaleState {
         Pending, Started, Ended, Paused, SoldOut
-    }
-
-    enum CrowdsaleStage {
-        TokenReservation, ClosedPresale, PublicPresale, Sale, LastChance
     }
 
     struct ExchangeRate {
@@ -50,8 +49,6 @@ contract CryptoPoliceCrowdsale is Ownable {
      * State in which the crowdsale is in
      */
     CrowdsaleState public state = CrowdsaleState.Pending;
-    
-    CrowdsaleStage public stage = CrowdsaleStage.TokenReservation;
 
     /**
      * Amount of wei each participant has spent in crowdsale
@@ -62,9 +59,6 @@ contract CryptoPoliceCrowdsale is Ownable {
 
     mapping(address => uint) public suspended;
 
-    /**
-     * Map stage to its corresponding exchange rate
-     */
     mapping(uint8 => ExchangeRate) exchangeRates;
     
     bool public crowdsaleEndedSuccessfully = false;
@@ -192,26 +186,6 @@ contract CryptoPoliceCrowdsale is Ownable {
         }
     }
 
-    function startClosedPresaleStage() public grantOwner notEnded {
-        require(stage == CrowdsaleStage.TokenReservation);
-        stage = CrowdsaleStage.ClosedPresale;
-    }
-
-    function startPublicPresaleStage() public grantOwner notEnded {
-        require(stage == CrowdsaleStage.ClosedPresale);
-        stage = CrowdsaleStage.PublicPresale;
-    }
-
-    function startSaleStage() public grantOwner notEnded {
-        require(stage == CrowdsaleStage.PublicPresale);
-        stage = CrowdsaleStage.Sale;
-    }
-
-    function startLastChanceStage() public grantOwner notEnded {
-        require(stage == CrowdsaleStage.Sale);
-        stage = CrowdsaleStage.LastChance;
-    }
-
     function markAddressIdentified(address _address) public grantOwner notEnded {
         identifiedAddresses[_address] = true;
 
@@ -287,9 +261,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     }
 
     function getExchangeRate(uint currentGoal) internal view returns (ExchangeRate) {
-        uint8 idxC = capRateIndexMapping(currentGoal);
-        uint8 idxS = stageRateIndexMapping();
-        uint8 idx = idxC > idxS ? idxC : idxS;
+        uint8 idx = capRateIndexMapping(currentGoal);
 
         ExchangeRate storage rate = exchangeRates[idx];
 
@@ -321,20 +293,6 @@ contract CryptoPoliceCrowdsale is Ownable {
             return HARD_CAP;
         }
         
-        assert(false);
-    }
-
-    function stageRateIndexMapping() internal view returns (uint8) {
-        if (stage == CrowdsaleStage.TokenReservation || stage == CrowdsaleStage.ClosedPresale) {
-            return 0;
-        } else if (stage == CrowdsaleStage.PublicPresale) {
-            return 1;
-        } else if (stage == CrowdsaleStage.Sale) {
-            return 2;
-        } else if (stage == CrowdsaleStage.LastChance) {
-            return 3;
-        }
-
         assert(false);
     }
 
