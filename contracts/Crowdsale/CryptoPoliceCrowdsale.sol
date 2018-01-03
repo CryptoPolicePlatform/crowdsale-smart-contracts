@@ -4,7 +4,8 @@ import "./CrowdsaleToken.sol";
 import "../Utils/Ownable.sol";
 import "./../Utils/Math.sol";
 
-// TODO: Automatic stage change based on sold out token volume
+// TODO: send back tokens to owner in case of failure?
+// TODO: Money back (Send tokens back to owner)
 contract CryptoPoliceCrowdsale is Ownable {
     using MathUtils for uint;
 
@@ -22,9 +23,9 @@ contract CryptoPoliceCrowdsale is Ownable {
     }
 
     uint public constant MIN_CAP = 12500000 * 10**18;
-    uint public constant SOFT_CAP = 40000000 * 10**18;
-    uint public constant POWER_CAP = 160000000 * 10**18;
-    uint public constant HARD_CAP = 400000000 * 10**18;
+    uint public constant SOFT_CAP = 51000000 * 10**18;
+    uint public constant POWER_CAP = 204000000 * 10**18;
+    uint public constant HARD_CAP = 510000000 * 10**18;
 
     uint public tokensExchanged;
 
@@ -60,8 +61,6 @@ contract CryptoPoliceCrowdsale is Ownable {
     mapping(address => bool) public identifiedAddresses;
 
     mapping(address => uint) public suspended;
-
-    mapping(address => uint) public reservedTokens;
 
     /**
      * Map stage to its corresponding exchange rate
@@ -146,11 +145,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         weiSpent[sender] = weiSpent[sender] + weiExchanged;
         weiRaised = weiRaised + weiExchanged;
 
-        if (stage == CrowdsaleStage.TokenReservation) {
-            reservedTokens[sender] = reservedTokens[sender].add(tokens);
-        } else {
-            transferTokens(sender, tokens);
-        }
+        transferTokens(sender, tokens);
     }
 
     function transferTokens(address recipient, uint amount) internal {
@@ -249,16 +244,6 @@ contract CryptoPoliceCrowdsale is Ownable {
 
     function updateMinSale(uint weiAmount) public grantOwner {
         minSale = weiAmount;
-    }
-
-    function transferReservedTokens(address recipient) public grantOwner {
-        uint amount = reservedTokens[recipient];
-
-        require(amount > 0);
-
-        reservedTokens[recipient] = 0;
-        
-        transferTokens(recipient, amount);
     }
 
     /**
