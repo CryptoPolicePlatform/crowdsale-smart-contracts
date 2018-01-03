@@ -5,7 +5,8 @@ import "./TotalSupply.sol";
 import "./Burnable.sol";
 import "./Balance.sol";
 
-// TODO: Implement burn
+// TODO: Suspend all transfers
+// TODO: Suspend owner tokens for x number of days
 /// ERC20 compliant token contract
 contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
     using MathUtils for uint;
@@ -16,6 +17,8 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
 
     mapping(address => mapping(address => uint)) allowances;
     
+    bool public publicTransfersEnabled = false;
+
     event Transfer(
         address indexed fromAccount,
         address indexed destination,
@@ -40,7 +43,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
     }
     
     function transfer(address destination, uint amount)
-    public requiresSufficientBalance(msg.sender, amount) returns (bool)
+    public requiresSufficientBalance(msg.sender, amount) whenTransferable returns (bool)
     {
         require(destination != address(this));
 
@@ -59,7 +62,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         address destination,
         uint amount
     )
-        public requiresSufficientBalance(source, amount) returns (bool)
+        public requiresSufficientBalance(source, amount) whenTransferable returns (bool)
     {
         require(allowances[source][msg.sender] >= amount);
         
@@ -102,5 +105,14 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         public constant returns (uint)
     {
         return allowances[fromAccount][destination];
+    }
+
+    function enablePublicTransfers() public grantOwner {
+        publicTransfersEnabled = true;
+    }
+
+    modifier whenTransferable {
+        require(isOwner() || publicTransfersEnabled);
+        _;
     }
 }
