@@ -7,7 +7,6 @@ import "./../Utils/Math.sol";
 // TODO: Gas price and limit
 // TODO: Test against common security issues
 // TODO: send back tokens to owner in case of failure?
-// TODO: Money back (Send tokens back to owner)
 contract CryptoPoliceCrowdsale is Ownable {
     using MathUtils for uint;
 
