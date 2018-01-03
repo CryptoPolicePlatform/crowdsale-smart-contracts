@@ -7,8 +7,12 @@ contract Ownable {
         owner = msg.sender;
     }
 
+    function isOwner() view public returns (bool) {
+        return msg.sender == owner;
+    }
+
     modifier grantOwner {
-        require(msg.sender == owner);
+        require(isOwner());
         _;
     }
 }
