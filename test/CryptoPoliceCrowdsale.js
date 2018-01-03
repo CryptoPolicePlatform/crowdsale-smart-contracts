@@ -45,21 +45,19 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         });
         it("Payment will yield correct number of tokens in return", function() {
             return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-                return crowdsale.startClosedPresaleStage().then(function () {
-                    const balanceBefore = web3.eth.getBalance(accounts[1]);
-                    return crowdsale.sendTransaction({
-                        from: accounts[1],
-                        value: minSale,
-                        gasPrice: gasPrice
-                    }).then(function(tx) {
-                        const balanceAfter = web3.eth.getBalance(accounts[1]);
-                        const calculatedBalanceAfter = balanceBefore.minus(minSale).minus(gasPrice * tx.receipt.gasUsed);
-                        Assert.equal(balanceAfter.toString(), calculatedBalanceAfter.toString(),
-                            "Balance mismatch after ether sent");
-                        return CryptoPoliceOfficerToken.deployed().then(function(token) {
-                            return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
-                                Assert.equal(minSale.toString(), tokenCount.toString());
-                            })
+                const balanceBefore = web3.eth.getBalance(accounts[1]);
+                return crowdsale.sendTransaction({
+                    from: accounts[1],
+                    value: minSale,
+                    gasPrice: gasPrice
+                }).then(function(tx) {
+                    const balanceAfter = web3.eth.getBalance(accounts[1]);
+                    const calculatedBalanceAfter = balanceBefore.minus(minSale).minus(gasPrice * tx.receipt.gasUsed);
+                    Assert.equal(balanceAfter.toString(), calculatedBalanceAfter.toString(),
+                        "Balance mismatch after ether sent");
+                    return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                        return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
+                            Assert.equal(minSale.toString(), tokenCount.toString());
                         })
                     })
                 })
@@ -112,22 +110,20 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
     it("Multiple exchange rates can apply within same cap", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.startClosedPresaleStage().then(function () {
-                const batchPrice = minSale.div(4);
-                return crowdsale.updateExchangeRate(0, minCap.div(2).sub(1), batchPrice).catch(function(error) {
+            const batchPrice = minSale.div(4);
+            return crowdsale.updateExchangeRate(0, minCap.div(2).sub(1), batchPrice).catch(function(error) {
+                Assert.ok(false, error.message);
+            }).then(function() {
+                return crowdsale.updateExchangeRate(1, 1, batchPrice).catch(function(error) {
                     Assert.ok(false, error.message);
                 }).then(function() {
-                    return crowdsale.updateExchangeRate(1, 1, batchPrice).catch(function(error) {
-                        Assert.ok(false, error.message);
+                    return crowdsale.sendTransaction({
+                        from: accounts[1],
+                        value: minSale
                     }).then(function() {
-                        return crowdsale.sendTransaction({
-                            from: accounts[1],
-                            value: minSale
-                        }).then(function() {
-                            return CryptoPoliceOfficerToken.deployed().then(function(token) {
-                                return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
-                                    Assert.equal(tokenCount.toString(), minCap.toString());
-                                })
+                        return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                            return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
+                                Assert.equal(tokenCount.toString(), minCap.toString());
                             })
                         })
                     })
@@ -177,19 +173,17 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                 return crowdsale.updateExchangeRate(1, softCap, sale).then(function() {
                     return crowdsale.updateExchangeRate(2, powerCap, sale).then(function() {
                         return crowdsale.updateExchangeRate(3, hardCap, sale).then(function() {
-                            return crowdsale.startClosedPresaleStage().then(function () {
+                            return crowdsale.sendTransaction({
+                                from: accounts[1],
+                                value: minSale
+                            }).then(function() {
                                 return crowdsale.sendTransaction({
                                     from: accounts[1],
                                     value: minSale
                                 }).then(function() {
-                                    return crowdsale.sendTransaction({
-                                        from: accounts[1],
-                                        value: minSale
-                                    }).then(function() {
-                                        Assert.ok(false, "Transaction was not rejected");
-                                    }).catch(revertCallback)
-                                })
-                            });
+                                    Assert.ok(false, "Transaction was not rejected");
+                                }).catch(revertCallback)
+                            })
                         });
                     });
                 });
@@ -222,24 +216,22 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
     it("Burn leftover tokens in various portions", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.startClosedPresaleStage().then(function () {
-                return crowdsale.updateExchangeRate(0, minCap, minSale).then(function() {
-                    return crowdsale.sendTransaction({
-                        from: accounts[1],
-                        value: minSale
-                    }).then(function() {
-                        return crowdsale.endCrowdsale(true).then(function() {
-                            return CryptoPoliceOfficerToken.deployed().then(function(token) {
-                                return token.totalSupply.call().then(function(originalSupply) {
-                                    return crowdsale.burnLeftoverTokens(50).then(function() {
-                                        return token.totalSupply.call().then(function(supply) {
-                                            const expected = originalSupply.sub(hardCap.sub(minCap).div(2));
-                                            Assert.equal(supply.toString(), expected.toString());
-                                            return crowdsale.burnLeftoverTokens(100).then(function() {
-                                                return token.totalSupply.call().then(function(supply) {
-                                                    const expected = originalSupply.sub(hardCap.sub(minCap));
-                                                    Assert.equal(supply.toString(), expected.toString());
-                                                })
+            return crowdsale.updateExchangeRate(0, minCap, minSale).then(function() {
+                return crowdsale.sendTransaction({
+                    from: accounts[1],
+                    value: minSale
+                }).then(function() {
+                    return crowdsale.endCrowdsale(true).then(function() {
+                        return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                            return token.totalSupply.call().then(function(originalSupply) {
+                                return crowdsale.burnLeftoverTokens(50).then(function() {
+                                    return token.totalSupply.call().then(function(supply) {
+                                        const expected = originalSupply.sub(hardCap.sub(minCap).div(2));
+                                        Assert.equal(supply.toString(), expected.toString());
+                                        return crowdsale.burnLeftoverTokens(100).then(function() {
+                                            return token.totalSupply.call().then(function(supply) {
+                                                const expected = originalSupply.sub(hardCap.sub(minCap));
+                                                Assert.equal(supply.toString(), expected.toString());
                                             })
                                         })
                                     })
@@ -256,20 +248,18 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
     it("Large exchange happens only after transaction is verified", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.startClosedPresaleStage().then(function () {
-                return crowdsale.updateExchangeRate(0, minCap, maxUnidentifiedInvestment.add(1)).then(function() {
-                    return crowdsale.updateMaxUnidentifiedInvestment(maxUnidentifiedInvestment).then(function() {
-                        return crowdsale.sendTransaction({
-                            from: accounts[1],
-                            value: maxUnidentifiedInvestment.add(1)
-                        }).then(function() {
-                            return CryptoPoliceOfficerToken.deployed().then(function(token) {
-                                return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
-                                    Assert.equal("0", tokenCount.toString());
-                                    return crowdsale.markAddressIdentified(accounts[1]).then(function() {
-                                        return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
-                                            Assert.equal(minCap.toString(), tokenCount.toString());
-                                        })
+            return crowdsale.updateExchangeRate(0, minCap, maxUnidentifiedInvestment.add(1)).then(function() {
+                return crowdsale.updateMaxUnidentifiedInvestment(maxUnidentifiedInvestment).then(function() {
+                    return crowdsale.sendTransaction({
+                        from: accounts[1],
+                        value: maxUnidentifiedInvestment.add(1)
+                    }).then(function() {
+                        return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                            return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
+                                Assert.equal("0", tokenCount.toString());
+                                return crowdsale.markAddressIdentified(accounts[1]).then(function() {
+                                    return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
+                                        Assert.equal(minCap.toString(), tokenCount.toString());
                                     })
                                 })
                             })
@@ -284,21 +274,19 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
     it("Return suspended funds once", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.startClosedPresaleStage().then(function () {
-                const transferAmount = maxUnidentifiedInvestment.add(1);
-                return crowdsale.updateExchangeRate(0, minCap, transferAmount).then(function() {
-                    return crowdsale.updateMaxUnidentifiedInvestment(maxUnidentifiedInvestment).then(function() {
-                        return crowdsale.sendTransaction({
-                            from: accounts[1],
-                            value: transferAmount
-                        }).then(function() {
-                            const balanceBefore = web3.eth.getBalance(accounts[1]);
-                            return crowdsale.returnSuspendedFunds(accounts[1]).then(function() {
-                                const balanceAfter = web3.eth.getBalance(accounts[1]);
-                                const expectedBalance = balanceBefore.add(transferAmount);
-                                Assert.equal(balanceAfter.toString(), expectedBalance.toString());
-                                return crowdsale.returnSuspendedFunds(accounts[1]).catch(revertCallback)
-                            })
+            const transferAmount = maxUnidentifiedInvestment.add(1);
+            return crowdsale.updateExchangeRate(0, minCap, transferAmount).then(function() {
+                return crowdsale.updateMaxUnidentifiedInvestment(maxUnidentifiedInvestment).then(function() {
+                    return crowdsale.sendTransaction({
+                        from: accounts[1],
+                        value: transferAmount
+                    }).then(function() {
+                        const balanceBefore = web3.eth.getBalance(accounts[1]);
+                        return crowdsale.returnSuspendedFunds(accounts[1]).then(function() {
+                            const balanceAfter = web3.eth.getBalance(accounts[1]);
+                            const expectedBalance = balanceBefore.add(transferAmount);
+                            Assert.equal(balanceAfter.toString(), expectedBalance.toString());
+                            return crowdsale.returnSuspendedFunds(accounts[1]).catch(revertCallback)
                         })
                     })
                 })
@@ -310,14 +298,12 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
     it("Payment is rejected on paused crowdsale", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.startClosedPresaleStage().then(function () {
-                return crowdsale.updateExchangeRate(0, minCap, minSale).then(function() {
-                    return crowdsale.pauseCrowdsale().then(function() {
-                        return crowdsale.sendTransaction({
-                            from: accounts[1],
-                            value: minSale
-                        }).catch(revertCallback)
-                    })
+            return crowdsale.updateExchangeRate(0, minCap, minSale).then(function() {
+                return crowdsale.pauseCrowdsale().then(function() {
+                    return crowdsale.sendTransaction({
+                        from: accounts[1],
+                        value: minSale
+                    }).catch(revertCallback)
                 })
             })
         });
@@ -327,13 +313,11 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
     it("Proxy exchange", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.startClosedPresaleStage().then(function () {
-                return crowdsale.updateExchangeRate(0, minCap, minSale).then(function() {
-                    return crowdsale.proxyExchange(accounts[1], minSale).then(function() {
-                        return CryptoPoliceOfficerToken.deployed().then(function(token) {
-                            return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
-                                Assert.equal(minCap.toString(), tokenCount.toString());
-                            })
+            return crowdsale.updateExchangeRate(0, minCap, minSale).then(function() {
+                return crowdsale.proxyExchange(accounts[1], minSale).then(function() {
+                    return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                        return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
+                            Assert.equal(minCap.toString(), tokenCount.toString());
                         })
                     })
                 })
@@ -345,18 +329,16 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     before(function() {
         return startCrowdsale().then(function() {
             return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-                return crowdsale.startClosedPresaleStage().then(function() {
-                    return crowdsale.updateExchangeRate(0, 1, minSale).then(function() {
+                return crowdsale.updateExchangeRate(0, 1, minSale).then(function() {
+                    return crowdsale.sendTransaction({
+                        from: accounts[1],
+                        value: minSale
+                    }).then(function() {
                         return crowdsale.sendTransaction({
-                            from: accounts[1],
+                            from: accounts[2],
                             value: minSale
                         }).then(function() {
-                            return crowdsale.sendTransaction({
-                                from: accounts[2],
-                                value: minSale
-                            }).then(function() {
-                                return crowdsale.endCrowdsale(false)
-                            })
+                            return crowdsale.endCrowdsale(false)
                         })
                     })
                 })
