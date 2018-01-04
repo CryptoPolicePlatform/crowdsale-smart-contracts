@@ -145,6 +145,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
     }
 
     function releaseLockedTokens(uint8 idx) public grantOwner {
+        require(releaseStartTime > 0);
         require(!locks[idx].released);
         require((releaseStartTime + locks[idx].timespan) < now);
 
@@ -154,14 +155,11 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
 
     modifier hasUnlockedAmount(address account, uint amount) {
         if (owner == account) {
-            uint balance = balanceOf(owner);
-            require(balance > lockedAmount && (balance - lockedAmount) >= amount);
+            require(balanceOf(owner).sub(lockedAmount) >= amount);
         }
-
         _;
     }
 
-//TODO: Rename
     modifier whenTransferable {
         require(publicTransfersEnabled || isCrowdsale() || isOwner());
         _;
