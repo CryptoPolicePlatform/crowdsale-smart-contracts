@@ -8,7 +8,7 @@ contract Balance {
         return balances[account];
     }
 
-    modifier requiresSufficientBalance(address account, uint balance) {
+    modifier hasSufficientBalance(address account, uint balance) {
         require(balances[account] >= balance);
         _;
     }

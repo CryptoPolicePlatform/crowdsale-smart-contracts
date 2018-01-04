@@ -52,7 +52,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
     }
     
     function transfer(address destination, uint amount)
-    public requiresSufficientBalance(msg.sender, amount) whenTransferable hasUnlockedAmount(msg.sender, amount)
+    public hasSufficientBalance(msg.sender, amount) whenTransferable hasUnlockedAmount(msg.sender, amount)
     returns (bool)
     {
         require(destination != address(this));
@@ -72,7 +72,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         address destination,
         uint amount
     )
-        public requiresSufficientBalance(source, amount) whenTransferable hasUnlockedAmount(source, amount)
+        public hasSufficientBalance(source, amount) whenTransferable hasUnlockedAmount(source, amount)
         returns (bool)
     {
         require(allowances[source][msg.sender] >= amount);

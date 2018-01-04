@@ -11,7 +11,7 @@ contract Burnable is TotalSupply, Balance, Ownable, Crowdsale {
 
     event Burn(address account, uint value);
 
-    function burn(uint amount) public grantBurner requiresSufficientBalance(msg.sender, amount) {
+    function burn(uint amount) public grantBurner hasSufficientBalance(msg.sender, amount) {
         balances[msg.sender] = balances[msg.sender].sub(amount);
         totalSupply = totalSupply.sub(amount);
         Burn(msg.sender, amount);
