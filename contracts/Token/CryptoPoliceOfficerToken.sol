@@ -17,6 +17,16 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
     mapping(address => mapping(address => uint)) allowances;
     
     bool public publicTransfersEnabled = false;
+    uint public releaseStartTime;
+
+    uint lockedAmount;
+    TokenLock[] public locks;
+
+    struct TokenLock {
+        uint amount;
+        uint timespan;
+        bool released;
+    }
 
     event Transfer(
         address indexed fromAccount,
@@ -42,7 +52,8 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
     }
     
     function transfer(address destination, uint amount)
-    public requiresSufficientBalance(msg.sender, amount) whenTransferable returns (bool)
+    public requiresSufficientBalance(msg.sender, amount) whenTransferable hasUnlockedAmount(msg.sender, amount)
+    returns (bool)
     {
         require(destination != address(this));
 
@@ -61,7 +72,8 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         address destination,
         uint amount
     )
-        public requiresSufficientBalance(source, amount) whenTransferable returns (bool)
+        public requiresSufficientBalance(source, amount) whenTransferable hasUnlockedAmount(source, amount)
+        returns (bool)
     {
         require(allowances[source][msg.sender] >= amount);
         
@@ -108,6 +120,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
 
     function enablePublicTransfers() public grantOwner {
         publicTransfersEnabled = true;
+        releaseStartTime = now;
     }
 
     function returnTokens(address _address) public returns (uint) {
@@ -121,6 +134,34 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         return balance;
     }
 
+    function addTokenLock(uint amount, uint timespan) public grantOwner {
+        locks.push(TokenLock({
+            amount: amount,
+            timespan: timespan,
+            released: false
+        }));
+
+        lockedAmount += amount;
+    }
+
+    function releaseLockedTokens(uint8 idx) public grantOwner {
+        require(!locks[idx].released);
+        require((releaseStartTime + locks[idx].timespan) < now);
+
+        locks[idx].released = true;
+        lockedAmount -= locks[idx].amount;
+    }
+
+    modifier hasUnlockedAmount(address account, uint amount) {
+        if (owner == account) {
+            uint balance = balanceOf(owner);
+            require(balance > lockedAmount && (balance - lockedAmount) >= amount);
+        }
+
+        _;
+    }
+
+//TODO: Rename
     modifier whenTransferable {
         require(publicTransfersEnabled || isCrowdsale() || isOwner());
         _;
