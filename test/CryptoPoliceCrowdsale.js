@@ -76,6 +76,13 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                     })
                 })
             });
+            it("Owner sets lock on tokens", function() {
+                return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                    return token.balanceOf.call(accounts[0]).then(function(balance) {
+                        return token.addTokenLock(balance, 0)
+                    })
+                }) 
+            });
             it("Owner enables public token transfer", function() {
                 return CryptoPoliceOfficerToken.deployed().then(function(token) {
                     return token.enablePublicTransfers()
@@ -102,6 +109,35 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                         })
                     })
                 })
+            });
+            it("Owner cannot transfer locked tokens", function() {
+                return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                    return token.transfer(accounts[1], 1).catch(revertCallback)
+                })
+            });
+            it("Owner releases locked tokens", function() {
+                return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                    return new Promise((resolve) => setTimeout(resolve, 1000)).then(function() {
+                        return token.releaseLockedTokens(0)
+                    })
+                })
+            });
+            it("Owner transfers previously locked tokens", function() {
+                return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                    return token.balanceOf.call(accounts[0]).then(function(transferAmount) {
+                        return token.balanceOf.call(accounts[1]).then(function(recipientBalanceBefore) {
+                            return token.transfer(accounts[1], transferAmount).then(function() {
+                                return token.balanceOf.call(accounts[0]).then(function(balnaceAfterTransfer) {
+                                    Assert.equal(balnaceAfterTransfer.toString(), "0");
+                                    return token.balanceOf.call(accounts[1]).then(function(recipientBalanceAfter) {
+                                        const expected = recipientBalanceBefore.add(transferAmount);
+                                        Assert.equal(recipientBalanceAfter.toString(), expected.toString());
+                                    });
+                                });
+                            })
+                        })
+                    })
+                }) 
             });
         });
     });
