@@ -135,6 +135,9 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
     }
 
     function addTokenLock(uint amount, uint timespan) public grantOwner {
+        require(releaseStartTime == 0);
+        requireOwnerUnlockedAmount(amount);
+
         locks.push(TokenLock({
             amount: amount,
             timespan: timespan,
@@ -153,9 +156,13 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         lockedAmount -= locks[idx].amount;
     }
 
+    function requireOwnerUnlockedAmount(uint amount) internal view {
+        require(balanceOf(owner).sub(lockedAmount) >= amount);
+    }
+
     modifier hasUnlockedAmount(address account, uint amount) {
         if (owner == account) {
-            require(balanceOf(owner).sub(lockedAmount) >= amount);
+            requireOwnerUnlockedAmount(amount);
         }
         _;
     }
