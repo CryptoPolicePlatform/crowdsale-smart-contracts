@@ -1,4 +1,4 @@
-const startCrowdsale = require('./../helpers/startCrowdsale');
+const startCrowdsaleHelper = require('./../helpers/startCrowdsale');
 const CryptoPoliceCrowdsale = artifacts.require("CryptoPoliceCrowdsale");
 const CryptoPoliceOfficerToken = artifacts.require("CryptoPoliceOfficerToken");
 const Assert = require('assert');
@@ -7,6 +7,10 @@ require('./../helpers/constants');
 
 const revertCallback = function(error) {
     Assert.ok(error.message.includes('revert'));
+};
+
+const startCrowdsale = function () {
+    return startCrowdsaleHelper(CryptoPoliceOfficerToken, CryptoPoliceCrowdsale);
 };
 
 // BE AVARE THAT TESTS DEPEND ON EACH OTHER!!
