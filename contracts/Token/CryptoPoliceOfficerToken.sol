@@ -4,8 +4,8 @@ import "./../Utils/Math.sol";
 import "./TotalSupply.sol";
 import "./Burnable.sol";
 import "./Balance.sol";
+import "./HardCap.sol";
 
-// TODO: Suspend owner tokens for x number of days
 /// ERC20 compliant token contract
 contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
     using MathUtils for uint;
@@ -52,7 +52,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
     }
     
     function transfer(address destination, uint amount)
-    public hasSufficientBalance(msg.sender, amount) whenTransferable hasUnlockedAmount(msg.sender, amount)
+    public hasSufficientBalance(msg.sender, amount) whenTransferable(destination) hasUnlockedAmount(msg.sender, amount)
     returns (bool)
     {
         require(destination != address(this));
@@ -72,7 +72,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         address destination,
         uint amount
     )
-        public hasSufficientBalance(source, amount) whenTransferable hasUnlockedAmount(source, amount)
+        public hasSufficientBalance(source, amount) whenTransferable(0) hasUnlockedAmount(source, amount)
         returns (bool)
     {
         require(allowances[source][msg.sender] >= amount);
@@ -160,6 +160,12 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         require(balanceOf(owner).sub(lockedAmount) >= amount);
     }
 
+    function setCrowdsaleContract(address crowdsale) public grantOwner {
+        super.setCrowdsaleContract(crowdsale);
+        uint hardCap = HardCap(crowdsale).getHardCap();
+        transfer(crowdsale, hardCap);
+    }
+
     modifier hasUnlockedAmount(address account, uint amount) {
         if (owner == account) {
             requireOwnerUnlockedAmount(amount);
@@ -167,8 +173,8 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         _;
     }
 
-    modifier whenTransferable {
-        require(publicTransfersEnabled || isCrowdsale() || isOwner());
+    modifier whenTransferable(address destination) {
+        require(publicTransfersEnabled || isCrowdsale() || (destination != address(0) && isOwner() && addressIsCrowdsale(destination) && balanceOf(crowdsaleContract) == 0));
         _;
     }
 }

@@ -2,7 +2,6 @@ pragma solidity ^0.4.18;
 
 import "./../Utils/Ownable.sol";
 
-// TODO: Contract name
 contract Crowdsale is Ownable {
     address public crowdsaleContract;
 
@@ -11,7 +10,12 @@ contract Crowdsale is Ownable {
         return msg.sender == crowdsaleContract;
     }
 
+    function addressIsCrowdsale(address _address) public view returns(bool) {
+        return crowdsaleContract == _address;
+    }
+
     function setCrowdsaleContract(address crowdsale) public grantOwner {
+        require(crowdsaleContract == address(0));
         crowdsaleContract = crowdsale;
     }
 }

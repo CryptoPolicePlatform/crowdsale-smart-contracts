@@ -329,6 +329,10 @@ contract CryptoPoliceCrowdsale is Ownable {
         return false;
     }
 
+    function getHardCap() public pure returns(uint) {
+        return HARD_CAP;
+    }
+
     modifier notEnded {
         require(state != CrowdsaleState.Ended);
         _;
