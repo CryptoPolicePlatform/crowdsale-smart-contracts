@@ -6,7 +6,8 @@
     "test": "test"
   },
   "dependencies": {
-    "bignumber.js": "^5.0.0"
+    "bignumber.js": "^5.0.0",
+    "truffle-contract": "^3.0.1"
   },
   "devDependencies": {
     "bignumber.js": "^5.0.0"
