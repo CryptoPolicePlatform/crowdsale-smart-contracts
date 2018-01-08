@@ -18,7 +18,7 @@ contract Burnable is TotalSupply, Balance, Ownable, Crowdsale {
     }
 
     modifier grantBurner {
-        require(isOwner() || isCrowdsale());
+        require(isCrowdsale());
         _;
     }
 }
