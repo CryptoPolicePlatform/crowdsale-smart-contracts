@@ -18,4 +18,9 @@ contract Crowdsale is Ownable {
         require(crowdsaleContract == address(0));
         crowdsaleContract = crowdsale;
     }
+
+    function getCrowdsaleHardCap() internal view returns(uint) {
+        require(crowdsaleSet());
+        return HardCap(crowdsaleContract).getHardCap();
+    }
 }

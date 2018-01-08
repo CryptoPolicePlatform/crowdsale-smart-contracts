@@ -4,7 +4,6 @@ import "./../Utils/Math.sol";
 import "./TotalSupply.sol";
 import "./Burnable.sol";
 import "./Balance.sol";
-import "./HardCap.sol";
 
 /// ERC20 compliant token contract
 contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
@@ -162,8 +161,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
 
     function setCrowdsaleContract(address crowdsale) public grantOwner {
         super.setCrowdsaleContract(crowdsale);
-        uint hardCap = HardCap(crowdsale).getHardCap();
-        transfer(crowdsale, hardCap);
+        transfer(crowdsale, getCrowdsaleHardCap());
     }
 
     modifier hasUnlockedAmount(address account, uint amount) {
