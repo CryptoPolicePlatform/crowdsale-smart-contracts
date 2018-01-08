@@ -37,7 +37,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         });
         it("Admin can update exchange rate", function() {
             return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-                return crowdsale.updateExchangeRate(0, 1, 1)
+                return crowdsale.updateExchangeRate(0, minCap, minSale)
             })
         });
         it("Payment less that minimum sale is rejected", function() {
@@ -61,7 +61,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                         "Balance mismatch after ether sent");
                     return CryptoPoliceOfficerToken.deployed().then(function(token) {
                         return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
-                            Assert.equal(minSale.toString(), tokenCount.toString());
+                            Assert.equal(tokenCount.toString(), minCap.toString());
                         })
                     })
                 })
@@ -89,31 +89,15 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
             });
             it("Owner enables public token transfer", function() {
                 return CryptoPoliceOfficerToken.deployed().then(function(token) {
-                    return token.enablePublicTransfers()
+                    return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+                        return crowdsale.endCrowdsale(true).then(function() {
+                            return token.enablePublicTransfers()
+                        })
+                    })
                 }) 
             });
         });
         describe("After token transfer is enabled", function() {
-            it("Can transfer tokens", function() {
-                return CryptoPoliceOfficerToken.deployed().then(function(token) {
-                    return token.transfer(accounts[2], 1, { from: accounts[1] }).then(function(){
-                        return token.balanceOf.call(accounts[2]).then(function(tokenCount) {
-                            Assert.equal(tokenCount.toString(), 1);
-                        })
-                    })
-                })
-            });
-            it("Can transfer tokens via allowance", function() {
-                return CryptoPoliceOfficerToken.deployed().then(function(token) {
-                    return token.approve(accounts[2], 1, { from: accounts[1] }).then(function() {
-                        return token.transferFrom(accounts[1], accounts[3], 1, { from: accounts[2] }).then(function() {
-                            return token.balanceOf.call(accounts[3]).then(function(tokenCount) {
-                                Assert.equal(tokenCount.toString(), 1);
-                            })
-                        })
-                    })
-                })
-            });
             it("Owner cannot transfer locked tokens", function() {
                 return CryptoPoliceOfficerToken.deployed().then(function(token) {
                     return token.transfer(accounts[1], 1).catch(revertCallback)
@@ -142,6 +126,26 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                         })
                     })
                 }) 
+            });
+            it("Can transfer tokens", function() {
+                return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                    return token.transfer(accounts[2], 1, { from: accounts[1] }).then(function(){
+                        return token.balanceOf.call(accounts[2]).then(function(tokenCount) {
+                            Assert.equal(tokenCount.toString(), 1);
+                        })
+                    })
+                })
+            });
+            it("Can transfer tokens via allowance", function() {
+                return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                    return token.approve(accounts[2], 1, { from: accounts[1] }).then(function() {
+                        return token.transferFrom(accounts[1], accounts[3], 1, { from: accounts[2] }).then(function() {
+                            return token.balanceOf.call(accounts[3]).then(function(tokenCount) {
+                                Assert.equal(tokenCount.toString(), 1);
+                            })
+                        })
+                    })
+                })
             });
         });
     });
