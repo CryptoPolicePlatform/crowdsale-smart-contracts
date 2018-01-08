@@ -118,6 +118,8 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
     }
 
     function enablePublicTransfers() public grantOwner {
+        require(crowdsaleSuccessful());
+        
         publicTransfersEnabled = true;
         releaseStartTime = now;
     }
@@ -172,7 +174,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
     }
 
     modifier whenTransferable(address destination) {
-        require(publicTransfersEnabled || isCrowdsale() || (destination != address(0) && isOwner() && addressIsCrowdsale(destination) && balanceOf(crowdsaleContract) == 0));
+        require(publicTransfersEnabled || isCrowdsale() || (isOwner() && addressIsCrowdsale(destination) && balanceOf(crowdsaleContract) == 0));
         _;
     }
 }

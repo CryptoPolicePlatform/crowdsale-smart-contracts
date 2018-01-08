@@ -333,6 +333,10 @@ contract CryptoPoliceCrowdsale is Ownable {
         return HARD_CAP;
     }
 
+    function isCrowdsaleSuccessful() public view returns(bool) {
+        return state == CrowdsaleState.Ended && crowdsaleEndedSuccessfully;
+    }
+
     modifier notEnded {
         require(state != CrowdsaleState.Ended);
         _;
