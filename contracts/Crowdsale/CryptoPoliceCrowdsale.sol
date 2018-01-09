@@ -218,7 +218,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         uint refundableAmount = weiSpent[participant];
         weiSpent[participant] = 0;
 
-        msg.sender.transfer(refundableAmount);
+        participant.transfer(refundableAmount);
     }
 
     function refund(address participant) public grantOwner {
