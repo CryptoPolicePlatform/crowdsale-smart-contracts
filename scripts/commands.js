@@ -4,9 +4,10 @@ const tokenMeta = require("../build/contracts/CryptoPoliceOfficerToken.json");
 const startCrowdsaleHelper = require('./../helpers/startCrowdsale');
 
 const requiredOptions = [
-    "from",     // Owner's address
-    "token",    // Address of token contract
-    "crowdsale" // Address of crowdsale contract
+    "from",         // Owner's address
+    "token",        // Address of token contract
+    "crowdsale",    // Address of crowdsale contract
+    "gas"
 ];
 
 module.exports = function(callback) {
@@ -64,8 +65,8 @@ function initArtifacts(args) {
     CryptoPoliceCrowdsale.setProvider(web3.currentProvider);
     CryptoPoliceOfficerToken.setProvider(web3.currentProvider);
 
-    CryptoPoliceCrowdsale.defaults({ from: args.options.from });
-    CryptoPoliceOfficerToken.defaults({ from: args.options.from });
+    CryptoPoliceCrowdsale.defaults({ from: args.options.from, gas: args.options.gas });
+    CryptoPoliceOfficerToken.defaults({ from: args.options.from, gas: args.options.gas });
 
     return {
         get crowdsale() {
@@ -111,11 +112,6 @@ const commands = {
             return crowdsale.returnSuspendedFunds(params[0])
         })
     },
-    TransferCrowdsaleFunds: function (callback, artifacts, params) {
-        return artifacts.crowdsale.then(function(crowdsale) {
-            return crowdsale.transferFunds(params[0], params[1])
-        })
-    },
     UpdateMaxUnidentifiedInvestment: function (callback, artifacts, params) {
         return artifacts.crowdsale.then(function(crowdsale) {
             return crowdsale.updateMaxUnidentifiedInvestment(params[0])
@@ -154,6 +150,11 @@ const commands = {
     ReleaseLockedTokens: function (callback, artifacts, params) {
         return artifacts.token.then(function(token) {
             return token.releaseLockedTokens(params[0])
+        })
+    },
+    Refund: function (callback, artifacts, params) {
+        return artifacts.crowdsale.then(function(crowdsale) {
+            return crowdsale.refund(params[0])
         })
     }
 };
