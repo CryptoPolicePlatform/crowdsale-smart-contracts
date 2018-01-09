@@ -36,8 +36,6 @@ contract CryptoPoliceCrowdsale is Ownable {
      */
     uint public weiRaised = 0;
 
-    uint public weiTransfered = 0;
-
     /**
      * Token that will be sold
      */
@@ -57,7 +55,7 @@ contract CryptoPoliceCrowdsale is Ownable {
 
     mapping(address => uint) public suspended;
 
-    mapping(uint8 => ExchangeRate) exchangeRates;
+    mapping(uint8 => ExchangeRate) public exchangeRates;
     
     bool public crowdsaleEndedSuccessfully = false;
 
@@ -179,8 +177,8 @@ contract CryptoPoliceCrowdsale is Ownable {
         state = CrowdsaleState.Ended;
         crowdsaleEndedSuccessfully = success;
 
-        if (success) {
-            transferFunds(owner, weiRaised - weiTransfered);
+        if (success && this.balance > 0) {
+            owner.transfer(this.balance);
         }
     }
 
@@ -200,15 +198,6 @@ contract CryptoPoliceCrowdsale is Ownable {
         _address.transfer(amount);
     }
 
-    function transferFunds(address recipient, uint weiAmount) public grantOwner {
-        require(tokensExchanged >= MIN_CAP);
-        require(weiRaised > weiTransfered);
-        require((weiRaised - weiTransfered) >= weiAmount);
-
-        weiTransfered = weiTransfered + weiAmount;
-        recipient.transfer(weiAmount);
-    }
-
     function updateMaxUnidentifiedInvestment(uint maxWei) public grantOwner notEnded {
         require(maxWei >= minSale);
         maxUnidentifiedInvestment = maxWei;
@@ -217,7 +206,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     function updateMinSale(uint weiAmount) public grantOwner {
         minSale = weiAmount;
     }
-
+// BUG: Proxy exchange case
     /**
      * Allow crowdsale participant to get refunded
      */
@@ -308,7 +297,8 @@ contract CryptoPoliceCrowdsale is Ownable {
         // at this point hard cap is reached
         assert(false);
     }
-    
+    // BUG: Proxy exchange case
+    // Condition: Before token unlock
     function moneyBack(address _address) public notEnded grantOwner {
         require(weiSpent[_address] > 0);
         uint refundAmount = weiSpent[_address];
