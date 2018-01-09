@@ -58,9 +58,7 @@ function getArgs() {
 }
 
 function initArtifacts(args) {
-    crowdsaleMeta.address = args.options.crowdsale;
     const CryptoPoliceCrowdsale = contract(crowdsaleMeta);
-    tokenMeta.address = args.options.token;
     const CryptoPoliceOfficerToken = contract(tokenMeta);
 
     CryptoPoliceCrowdsale.setProvider(web3.currentProvider);
@@ -71,10 +69,10 @@ function initArtifacts(args) {
 
     return {
         get crowdsale() {
-            return CryptoPoliceCrowdsale
+            return CryptoPoliceCrowdsale.at(args.options.crowdsale)
         },
         get token() {
-            return CryptoPoliceOfficerToken
+            return CryptoPoliceOfficerToken.at(args.options.token)
         }
     }
 }
@@ -84,77 +82,77 @@ const commands = {
         return startCrowdsaleHelper(artifacts.token, artifacts.crowdsale)
     },
     Pause: function (callback, artifacts) {
-        return artifacts.crowdsale.deployed().then(function(crowdsale) {
+        return artifacts.crowdsale.then(function(crowdsale) {
             return crowdsale.pauseCrowdsale()
         })
     },
     Unpause: function (callback, artifacts) {
-        return artifacts.crowdsale.deployed().then(function(crowdsale) {
+        return artifacts.crowdsale.then(function(crowdsale) {
             return crowdsale.unPauseCrowdsale()
         })
     },
     ProxyExchange: function (callback, artifacts, params) {
-        return artifacts.crowdsale.deployed().then(function(crowdsale) {
+        return artifacts.crowdsale.then(function(crowdsale) {
             return crowdsale.proxyExchange(params[0], params[1])
         })
     },
     EndCrowdsale: function (callback, artifacts, params) {
-        return artifacts.crowdsale.deployed().then(function(crowdsale) {
+        return artifacts.crowdsale.then(function(crowdsale) {
             return crowdsale.endCrowdsale(params[0] == "true" || params[0] == "1")
         })
     },
     MarkAddressIdentified: function (callback, artifacts, params) {
-        return artifacts.crowdsale.deployed().then(function(crowdsale) {
+        return artifacts.crowdsale.then(function(crowdsale) {
             return crowdsale.markAddressIdentified(params[0])
         })
     },
     ReturnSuspendedFunds: function (callback, artifacts, params) {
-        return artifacts.crowdsale.deployed().then(function(crowdsale) {
+        return artifacts.crowdsale.then(function(crowdsale) {
             return crowdsale.returnSuspendedFunds(params[0])
         })
     },
     TransferCrowdsaleFunds: function (callback, artifacts, params) {
-        return artifacts.crowdsale.deployed().then(function(crowdsale) {
+        return artifacts.crowdsale.then(function(crowdsale) {
             return crowdsale.transferFunds(params[0], params[1])
         })
     },
     UpdateMaxUnidentifiedInvestment: function (callback, artifacts, params) {
-        return artifacts.crowdsale.deployed().then(function(crowdsale) {
+        return artifacts.crowdsale.then(function(crowdsale) {
             return crowdsale.updateMaxUnidentifiedInvestment(params[0])
         })
     },
     UpdateMinSale: function (callback, artifacts, params) {
-        return artifacts.crowdsale.deployed().then(function(crowdsale) {
+        return artifacts.crowdsale.then(function(crowdsale) {
             return crowdsale.updateMinSale(params[0])
         })
     },
     BurnLeftoverTokens: function (callback, artifacts, params) {
-        return artifacts.crowdsale.deployed().then(function(crowdsale) {
+        return artifacts.crowdsale.then(function(crowdsale) {
             return crowdsale.burnLeftoverTokens(params[0])
         })
     },
     UpdateExchangeRate: function (callback, artifacts, params) {
-        return artifacts.crowdsale.deployed().then(function(crowdsale) {
+        return artifacts.crowdsale.then(function(crowdsale) {
             return crowdsale.updateExchangeRate(params[0], params[1], params[2])
         })
     },
     MoneyBack: function (callback, artifacts, params) {
-        return artifacts.crowdsale.deployed().then(function(crowdsale) {
+        return artifacts.crowdsale.then(function(crowdsale) {
             return crowdsale.moneyBack(params[0])
         })
     },
     EnablePublicTransfers: function (callback, artifacts) {
-        return artifacts.token.deployed().then(function(token) {
+        return artifacts.token.then(function(token) {
             return token.enablePublicTransfers()
         })
     },
     AddTokenLock: function (callback, artifacts, params) {
-        return artifacts.token.deployed().then(function(token) {
+        return artifacts.token.then(function(token) {
             return token.addTokenLock(params[0], params[1])
         })
     },
     ReleaseLockedTokens: function (callback, artifacts, params) {
-        return artifacts.token.deployed().then(function(token) {
+        return artifacts.token.then(function(token) {
             return token.releaseLockedTokens(params[0])
         })
     }
