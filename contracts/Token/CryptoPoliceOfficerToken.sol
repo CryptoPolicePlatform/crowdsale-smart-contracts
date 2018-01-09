@@ -18,7 +18,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
     bool public publicTransfersEnabled = false;
     uint public releaseStartTime;
 
-    uint lockedAmount;
+    uint public lockedAmount;
     TokenLock[] public locks;
 
     struct TokenLock {
