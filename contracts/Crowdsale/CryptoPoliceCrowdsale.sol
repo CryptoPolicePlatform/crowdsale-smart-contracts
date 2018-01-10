@@ -1,4 +1,4 @@
-pragma solidity ^0.4.18;
+pragma solidity ^0.4.19;
 
 import "./CrowdsaleToken.sol";
 import "../Utils/Ownable.sol";
@@ -17,6 +17,14 @@ contract CryptoPoliceCrowdsale is Ownable {
     struct ExchangeRate {
         uint tokens;
         uint price;
+    }
+
+    struct Investor {
+        bool identified;
+        uint directWeiAmount;
+        uint externalWeiAmount;
+        uint suspendedDirectWeiAmount;
+        uint suspendedExternalWeiAmount;
     }
 
     uint public constant MIN_CAP = 12500000 * 10**18;
@@ -46,16 +54,9 @@ contract CryptoPoliceCrowdsale is Ownable {
      */
     CrowdsaleState public state = CrowdsaleState.Pending;
 
-    /**
-     * Amount of wei each participant has spent in crowdsale
-     */
-    mapping(address => uint) public weiSpent;
+    mapping(address => Investor) public investors;
 
-    mapping(address => bool) public identifiedAddresses;
-
-    mapping(address => uint) public suspended;
-
-    mapping(uint8 => ExchangeRate) public exchangeRates;
+    ExchangeRate[4] public exchangeRates;
     
     bool public crowdsaleEndedSuccessfully = false;
 
@@ -70,14 +71,22 @@ contract CryptoPoliceCrowdsale is Ownable {
             refundContribution(msg.sender);
         } else {
             require(state == CrowdsaleState.Started);
-            exchange(msg.sender, msg.value);
+            exchange(msg.sender, msg.value, true);
         }
     }
 
-    function exchange(address sender, uint weiSent) internal {
+    function exchange(address sender, uint weiSent, bool direct) internal {
         require(weiSent >= minSale);
 
-        if (trySuspend(sender, weiSent)) {
+        uint totalWeiSpent = investors[sender].directWeiAmount.add(weiSent);
+        totalWeiSpent = totalWeiSpent.add(investors[sender].externalWeiAmount);
+
+        if (totalWeiSpent > maxUnidentifiedInvestment && ! investors[sender].identified) {
+            if (direct) {
+                investors[sender].suspendedDirectWeiAmount = investors[sender].suspendedDirectWeiAmount.add(weiSent);
+            } else {
+                investors[sender].suspendedExternalWeiAmount = investors[sender].suspendedExternalWeiAmount.add(weiSent);
+            }
             return;
         }
 
@@ -132,7 +141,12 @@ contract CryptoPoliceCrowdsale is Ownable {
             sender.transfer(weiRemaining);
         }
 
-        weiSpent[sender] = weiSpent[sender] + weiExchanged;
+        if (direct) {
+            investors[sender].directWeiAmount = investors[sender].directWeiAmount.add(weiExchanged);
+        } else {
+            investors[sender].externalWeiAmount = investors[sender].externalWeiAmount.add(weiExchanged);
+        }
+        
         weiRaised = weiRaised + weiExchanged;
 
         transferTokens(sender, tokens);
@@ -147,7 +161,7 @@ contract CryptoPoliceCrowdsale is Ownable {
      * for those funds aligned to Wei
      */
     function proxyExchange(address sender, uint weiSent) public grantOwner {
-        exchange(sender, weiSent);
+        exchange(sender, weiSent, false);
     }
 
     /**
@@ -183,18 +197,26 @@ contract CryptoPoliceCrowdsale is Ownable {
     }
 
     function markAddressIdentified(address _address) public grantOwner notEnded {
-        identifiedAddresses[_address] = true;
+        investors[_address].identified = true;
 
-        if (suspended[_address] > 0) {
-            exchange(_address, suspended[_address]);
-            suspended[_address] = 0;
+        if (investors[_address].suspendedDirectWeiAmount > 0) {
+            exchange(_address, investors[_address].suspendedDirectWeiAmount, true);
+            investors[_address].suspendedDirectWeiAmount = 0;
+        }
+
+        if (investors[_address].suspendedExternalWeiAmount > 0) {
+            exchange(_address, investors[_address].suspendedExternalWeiAmount, false);
+            investors[_address].suspendedExternalWeiAmount = 0;
         }
     }
 
     function returnSuspendedFunds(address _address) public grantOwner {
-        require(suspended[_address] > 0);
-        uint amount = suspended[_address];
-        suspended[_address] = 0;
+        require(investors[_address].suspendedDirectWeiAmount > 0);
+
+        uint amount = investors[_address].suspendedDirectWeiAmount;
+        investors[_address].suspendedDirectWeiAmount = 0;
+        investors[_address].suspendedExternalWeiAmount = 0;
+        
         _address.transfer(amount);
     }
 
@@ -206,17 +228,17 @@ contract CryptoPoliceCrowdsale is Ownable {
     function updateMinSale(uint weiAmount) public grantOwner {
         minSale = weiAmount;
     }
-// BUG: Proxy exchange case
+
     /**
      * Allow crowdsale participant to get refunded
      */
     function refundContribution(address participant) internal {
         require(state == CrowdsaleState.Ended);
-        require(weiSpent[participant] > 0);
         require(crowdsaleEndedSuccessfully == false);
+        require(investors[participant].directWeiAmount > 0);
         
-        uint refundableAmount = weiSpent[participant];
-        weiSpent[participant] = 0;
+        uint refundableAmount = investors[participant].directWeiAmount;
+        investors[participant].directWeiAmount = 0;
 
         participant.transfer(refundableAmount);
     }
@@ -297,26 +319,17 @@ contract CryptoPoliceCrowdsale is Ownable {
         // at this point hard cap is reached
         assert(false);
     }
-    // BUG: Proxy exchange case
-    // Condition: Before token unlock
+
     function moneyBack(address _address) public notEnded grantOwner {
-        require(weiSpent[_address] > 0);
-        uint refundAmount = weiSpent[_address];
-        weiSpent[_address] = 0;
-        _address.transfer(refundAmount);
-        uint tokenRefundAmount = token.returnTokens(_address);
-        tokensExchanged = tokensExchanged.sub(tokenRefundAmount);
-    }
+        require(investors[_address].directWeiAmount > 0);
 
-    function trySuspend(address sender, uint weiSent) internal returns (bool) {
-        uint senderWeiSpent = weiSpent[sender].add(weiSent);
+        uint refundableTokenAmount = token.returnTokens(_address);
+        tokensExchanged = tokensExchanged.sub(refundableTokenAmount);
 
-        if (senderWeiSpent > maxUnidentifiedInvestment && ! identifiedAddresses[sender]) {
-            suspended[sender] = suspended[sender].add(weiSent);
-            return true;
-        }
+        uint refundAmount = investors[_address].directWeiAmount;
+        investors[_address].directWeiAmount = 0;
 
-        return false;
+        _address.transfer(refundAmount);   
     }
 
     function getHardCap() public pure returns(uint) {
