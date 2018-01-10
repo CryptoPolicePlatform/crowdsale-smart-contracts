@@ -409,7 +409,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                 const balnace2AfterTx = web3.eth.getBalance(accounts[2]);
                 return crowdsale.refund(accounts[2]).then(function() {
                     const balance2AfterRefund = web3.eth.getBalance(accounts[2]);
-                    Assert.equal(balance2AfterRefund.toString(), balnace2AfterTx.toString());
+                    Assert.equal(balance2AfterRefund.toString(), balnace2AfterTx.add(minSale).toString());
                 })
             })
         })
