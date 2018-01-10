@@ -73,8 +73,8 @@ contract("All", function (accounts) {
     it("Mark address identified", function () {
         return runCommand("MarkAddressIdentified", [accounts[1]]).then(function () {
             return CryptoPoliceCrowdsale.deployed().then(function (crowdsale) {
-                return crowdsale.identifiedAddresses.call(accounts[1]).then(function (result) {
-                    Assert.ok(result)
+                return crowdsale.investors.call(accounts[1]).then(function (result) {
+                    Assert.ok(result[0])
                 })
             })
         })
@@ -113,8 +113,8 @@ contract("All", function (accounts) {
         const amount = new BigNumber("10e+18");
         return runCommand("ProxyExchange", [accounts[2], amount]).then(function () {
             return CryptoPoliceCrowdsale.deployed().then(function (crowdsale) {
-                return crowdsale.weiSpent.call(accounts[2]).then(function (value) {
-                    Assert.equal(value.toString(), amount.toString());
+                return crowdsale.investors.call(accounts[2]).then(function (result) {
+                    Assert.equal(result[2].toString(), amount.toString());
                 })
             })
         })
