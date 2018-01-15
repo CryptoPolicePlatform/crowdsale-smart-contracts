@@ -1,13 +1,13 @@
 pragma solidity ^0.4.19;
 
 import "./CrowdsaleToken.sol";
-import "../Utils/Ownable.sol";
+import "./CrowdsaleAccessPolicy.sol";
 import "./../Utils/Math.sol";
 
 // TODO: Gas price and limit
 // TODO: Test against common security issues
 // TODO: send back tokens to owner in case of failure?
-contract CryptoPoliceCrowdsale is Ownable {
+contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
     using MathUtils for uint;
 
     enum CrowdsaleState {
@@ -160,26 +160,27 @@ contract CryptoPoliceCrowdsale is Ownable {
      * Intended when other currencies are received and owner has to carry out exchange
      * for those funds aligned to Wei
      */
-    function proxyExchange(address sender, uint weiSent) public grantOwner {
+    function proxyExchange(address sender, uint weiSent) public proxyExchangePolicy {
         exchange(sender, weiSent, false);
     }
 
     /**
      * Command for owner to start crowdsale
      */
-    function startCrowdsale(address crowdsaleToken) public grantOwner {
+    function startCrowdsale(address crowdsaleToken, address adminAddress) public grantOwner {
         require(state == CrowdsaleState.Pending);
+        setAdmin(adminAddress);
         token = CrowdsaleToken(crowdsaleToken);
         require(token.balanceOf(address(this)) == HARD_CAP);
         state = CrowdsaleState.Started;
     }
 
-    function pauseCrowdsale() public grantOwner {
+    function pauseCrowdsale() public pauseCrowdsalePolicy {
         require(state == CrowdsaleState.Started);
         state = CrowdsaleState.Paused;
     }
 
-    function unPauseCrowdsale() public grantOwner {
+    function unPauseCrowdsale() public unpauseCrowdsalePolicy {
         require(state == CrowdsaleState.Paused);
         state = CrowdsaleState.Started;
     }
@@ -196,7 +197,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         }
     }
 
-    function markAddressIdentified(address _address) public grantOwner notEnded {
+    function markAddressIdentified(address _address) public markAddressIdentifiedPolicy notEnded {
         investors[_address].identified = true;
 
         if (investors[_address].suspendedDirectWeiAmount > 0) {
@@ -210,7 +211,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         }
     }
 
-    function returnSuspendedFunds(address _address) public grantOwner {
+    function returnSuspendedFunds(address _address) public returnSuspendedFundsPolicy {
         require(investors[_address].suspendedDirectWeiAmount > 0);
 
         uint amount = investors[_address].suspendedDirectWeiAmount;
@@ -259,7 +260,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         }
     }
 
-    function updateExchangeRate(uint8 idx, uint tokens, uint price) public grantOwner {
+    function updateExchangeRate(uint8 idx, uint tokens, uint price) public updateExchangeRatePolicy {
         require(tokens > 0 && price > 0);
         require(idx >= 0 && idx <= 3);
 
@@ -320,7 +321,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         assert(false);
     }
 
-    function moneyBack(address _address) public notEnded grantOwner {
+    function moneyBack(address _address) public notEnded moneyBackPolicy {
         require(investors[_address].directWeiAmount > 0);
 
         uint refundableTokenAmount = token.returnTokens(_address);
