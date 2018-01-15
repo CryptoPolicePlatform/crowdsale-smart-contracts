@@ -10,7 +10,12 @@ const revertCallback = function(error) {
 };
 
 const startCrowdsale = function () {
-    return startCrowdsaleHelper(CryptoPoliceOfficerToken.deployed(), CryptoPoliceCrowdsale.deployed());
+    return CryptoPoliceOfficerToken.deployed().then(function (token) {
+        return token.owner.call().then(function (owner) {
+            return startCrowdsaleHelper(CryptoPoliceOfficerToken.deployed(),
+                CryptoPoliceCrowdsale.deployed(), owner);
+        })
+    })
 };
 
 // BE AVARE THAT TESTS DEPEND ON EACH OTHER!!

@@ -35,7 +35,7 @@ const runCommand = function (cmdName, params) {
 
 contract("All", function (accounts) {
     it("Start crowdsale", function () {
-        return runCommand("Start").then(function () {
+        return runCommand("Start", [accounts[0]]).then(function () {
             return CryptoPoliceCrowdsale.deployed().then(function (crowdsale) {
                 return crowdsale.state.call().then(function (state) {
                     Assert.equal(state.toString(), "1")
@@ -192,7 +192,7 @@ contract("All", function (accounts) {
 });
 contract("All", function (accounts) {
     it("Refund", function () {
-        return startCrowdsaleHelper(CryptoPoliceOfficerToken.deployed(), CryptoPoliceCrowdsale.deployed()).then(function () {
+        return startCrowdsaleHelper(CryptoPoliceOfficerToken.deployed(), CryptoPoliceCrowdsale.deployed(), accounts[0]).then(function () {
             return CryptoPoliceCrowdsale.deployed().then(function (crowdsale) {
                 return crowdsale.updateExchangeRate(0, 1, minSale).then(function () {
                     return crowdsale.sendTransaction({
