@@ -79,8 +79,8 @@ function initArtifacts(args) {
 }
 
 const commands = {
-    Start: function (callback, artifacts) {
-        return startCrowdsaleHelper(artifacts.token, artifacts.crowdsale)
+    Start: function (callback, artifacts, params) {
+        return startCrowdsaleHelper(artifacts.token, artifacts.crowdsale, params[0])
     },
     Pause: function (callback, artifacts) {
         return artifacts.crowdsale.then(function(crowdsale) {
