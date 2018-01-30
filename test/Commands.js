@@ -111,7 +111,7 @@ contract("All", function (accounts) {
     });
     it("Proxy exchange", function () {
         const amount = new BigNumber("10e+18");
-        return runCommand("ProxyExchange", [accounts[2], amount]).then(function () {
+        return runCommand("ProxyExchange", [accounts[2], amount, "reference", "checksum"]).then(function () {
             return CryptoPoliceCrowdsale.deployed().then(function (crowdsale) {
                 return crowdsale.investors.call(accounts[2]).then(function (result) {
                     Assert.equal(result[2].toString(), amount.toString());
