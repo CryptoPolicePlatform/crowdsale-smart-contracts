@@ -363,7 +363,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     it("Proxy exchange", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
             return crowdsale.updateExchangeRate(0, minCap, minSale).then(function() {
-                return crowdsale.proxyExchange(accounts[1], minSale).then(function() {
+                return crowdsale.proxyExchange(accounts[1], minSale, "reference", "checksum").then(function() {
                     return CryptoPoliceOfficerToken.deployed().then(function(token) {
                         return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
                             Assert.equal(minCap.toString(), tokenCount.toString());
