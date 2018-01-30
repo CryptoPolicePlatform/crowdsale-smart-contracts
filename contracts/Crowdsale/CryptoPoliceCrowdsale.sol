@@ -3,15 +3,21 @@ pragma solidity ^0.4.19;
 import "./CrowdsaleToken.sol";
 import "./CrowdsaleAccessPolicy.sol";
 import "./../Utils/Math.sol";
+import "./../Utils/Strings.sol";
 
 // TODO: Gas price and limit
 // TODO: Test against common security issues
 // TODO: send back tokens to owner in case of failure?
 contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
     using MathUtils for uint;
+    using StringUtils for string;
 
     enum CrowdsaleState {
         Pending, Started, Ended, Paused, SoldOut
+    }
+
+    enum ProxyExchangeResult {
+        Ok, BeneficiaryMismatch, ChecksumCollision, RecordExists
     }
 
     struct ExchangeRate {
@@ -25,6 +31,11 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         uint externalWeiAmount;
         uint suspendedDirectWeiAmount;
         uint suspendedExternalWeiAmount;
+    }
+
+    struct ExternalPayment {
+        address beneficiary;
+        string reference;
     }
 
     uint public constant MIN_CAP = 12500000 * 10**18;
@@ -61,6 +72,8 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
     bool public crowdsaleEndedSuccessfully = false;
 
     uint public maxUnidentifiedInvestment = 25 ether;
+
+    mapping(bytes32 => ExternalPayment) public externalPayments;
 
     /**
      * Exchange tokens for Wei received
@@ -160,8 +173,29 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
      * Intended when other currencies are received and owner has to carry out exchange
      * for those funds aligned to Wei
      */
-    function proxyExchange(address sender, uint weiSent) public proxyExchangePolicy {
-        exchange(sender, weiSent, false);
+    function proxyExchange(address beneficiary, uint weiSent, string reference, bytes32 refChecksum)
+    public proxyExchangePolicy returns (ProxyExchangeResult)
+    {
+        require(beneficiary != address(0));
+        require(bytes(reference).length > 0);
+        require(refChecksum.length > 0);
+
+        ExternalPayment storage ep = externalPayments[refChecksum];
+
+        if (ep.beneficiary != address(0)) {
+            if ( ! ep.reference.equals(reference)) {
+                return ProxyExchangeResult.ChecksumCollision;
+            }
+            if (ep.beneficiary == beneficiary) {
+                return ProxyExchangeResult.RecordExists;
+            } else {
+                return ProxyExchangeResult.BeneficiaryMismatch;
+            }
+        }
+
+        exchange(beneficiary, weiSent, false);
+
+        return ProxyExchangeResult.Ok;
     }
 
     /**
