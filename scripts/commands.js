@@ -94,7 +94,7 @@ const commands = {
     },
     ProxyExchange: function (callback, artifacts, params) {
         return artifacts.crowdsale.then(function(crowdsale) {
-            return crowdsale.proxyExchange(params[0], params[1])
+            return crowdsale.proxyExchange(params[0], params[1], params[2], params[3])
         })
     },
     EndCrowdsale: function (callback, artifacts, params) {
