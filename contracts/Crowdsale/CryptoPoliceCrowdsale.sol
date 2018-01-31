@@ -16,10 +16,6 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         Pending, Started, Ended, Paused, SoldOut
     }
 
-    enum ProxyExchangeResult {
-        Ok, BeneficiaryMismatch, ChecksumCollision, RecordExists
-    }
-
     struct ExchangeRate {
         uint tokens;
         uint price;
@@ -31,11 +27,6 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         uint externalWeiAmount;
         uint suspendedDirectWeiAmount;
         uint suspendedExternalWeiAmount;
-    }
-
-    struct ExternalPayment {
-        address beneficiary;
-        string reference;
     }
 
     uint public constant MIN_CAP = 12500000 * 10**18;
@@ -73,7 +64,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
 
     uint public maxUnidentifiedInvestment = 25 ether;
 
-    mapping(bytes32 => ExternalPayment) public externalPayments;
+    mapping(bytes32 => string) public externalPaymentReferences;
 
     /**
      * Exchange tokens for Wei received
@@ -174,28 +165,19 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
      * for those funds aligned to Wei
      */
     function proxyExchange(address beneficiary, uint weiSent, string reference, bytes32 refChecksum)
-    public proxyExchangePolicy returns (ProxyExchangeResult)
+    public proxyExchangePolicy
     {
         require(beneficiary != address(0));
         require(bytes(reference).length > 0);
         require(refChecksum.length > 0);
 
-        ExternalPayment storage ep = externalPayments[refChecksum];
+        string storage epr = externalPaymentReferences[refChecksum];
 
-        if (ep.beneficiary != address(0)) {
-            if ( ! ep.reference.equals(reference)) {
-                return ProxyExchangeResult.ChecksumCollision;
-            }
-            if (ep.beneficiary == beneficiary) {
-                return ProxyExchangeResult.RecordExists;
-            } else {
-                return ProxyExchangeResult.BeneficiaryMismatch;
-            }
-        }
+        require(bytes(epr).length == 0);
 
         exchange(beneficiary, weiSent, false);
-
-        return ProxyExchangeResult.Ok;
+        
+        externalPaymentReferences[refChecksum] = reference;
     }
 
     /**
