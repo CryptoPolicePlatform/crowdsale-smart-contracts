@@ -9,7 +9,7 @@ library StringUtils {
             return false;
         }
 
-        for (uint i = 1; i <= b1.length; i++) {
+        for (uint i = 0; i < b1.length; i++) {
             if (b1[i] != b2[i]) {
                 return false;
             }
