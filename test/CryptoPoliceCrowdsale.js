@@ -373,6 +373,22 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
             })
         })
     });
+    it("Proxy exchange different beneficiary", function() {
+        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+            return crowdsale.updateExchangeRate(1, 1, minSale).then(function() {
+                return crowdsale.proxyExchange(accounts[2], minSale, "reference", "checksum")
+                    .catch(revertCallback)
+            })
+        })
+    });
+    it("Proxy exchange with different reference but same checksum", function() {
+        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+            return crowdsale.updateExchangeRate(2, 1, minSale).then(function() {
+                return crowdsale.proxyExchange(accounts[1], minSale, "reference1", "checksum")
+                    .catch(revertCallback)
+            })
+        })
+    });
 });
 contract('CryptoPoliceCrowdsale', function(accounts) {
     before(function() {
