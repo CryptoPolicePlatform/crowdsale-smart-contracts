@@ -3,14 +3,12 @@ pragma solidity ^0.4.19;
 import "./CrowdsaleToken.sol";
 import "./CrowdsaleAccessPolicy.sol";
 import "./../Utils/Math.sol";
-import "./../Utils/Strings.sol";
 
 // TODO: Gas price and limit
 // TODO: Test against common security issues
 // TODO: send back tokens to owner in case of failure?
 contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
     using MathUtils for uint;
-    using StringUtils for string;
 
     enum CrowdsaleState {
         Pending, Started, Ended, Paused, SoldOut
