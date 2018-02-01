@@ -76,7 +76,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
             exchange(msg.sender, msg.value, true);
         }
     }
-
+// TODO: Case where eth is sent when hard cap is reached
     function exchange(address sender, uint weiSent, bool direct) internal {
         require(weiSent >= minSale);
 
@@ -139,7 +139,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
             break;
         }
 
-        if (weiRemaining > 0) {
+        if (weiRemaining > 0) { // TODO: Only direct
             sender.transfer(weiRemaining);
         }
 
@@ -207,7 +207,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         crowdsaleEndedSuccessfully = success;
 
         if (success && this.balance > 0) {
-            owner.transfer(this.balance);
+            owner.transfer(this.balance); // TODO: Do not send suspended resources
         }
     }
 
@@ -249,7 +249,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
      */
     function refundContribution(address participant) internal {
         require(state == CrowdsaleState.Ended);
-        require(crowdsaleEndedSuccessfully == false);
+        require(crowdsaleEndedSuccessfully == false); // TODO: Handle suspended resources
         require(investors[participant].directWeiAmount > 0);
         
         uint refundableAmount = investors[participant].directWeiAmount;
