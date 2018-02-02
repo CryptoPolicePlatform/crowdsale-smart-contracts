@@ -482,3 +482,28 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         })
     })
 });
+contract('CryptoPoliceCrowdsale', function(accounts) {
+    before(startCrowdsale);
+    it("Suspended amount is not transfered when crowdsale ended", function() {
+        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+            return crowdsale.updateExchangeRate(0, 1, minSale).then(function() {
+                const balanceBefore = web3.eth.getBalance(accounts[0]);
+                return crowdsale.sendTransaction({
+                    from: accounts[1],
+                    value: minSale
+                }).then(function () {
+                    return crowdsale.sendTransaction({
+                        from: accounts[2],
+                        value: maxUnidentifiedAmount.add(minSale)
+                    }).then(function () {
+                        return crowdsale.endCrowdsale(true, { gasPrice: gasPrice }).then(function(tx) {
+                            const balanceAfter = web3.eth.getBalance(accounts[0]);
+                            const balanceExpected = balanceBefore.add(minSale).sub(gasPrice * tx.receipt.gasUsed);
+                            Assert.equal(balanceAfter.toString(), balanceExpected.toString());
+                        })
+                    })
+                })
+            })
+        })
+    })
+});
