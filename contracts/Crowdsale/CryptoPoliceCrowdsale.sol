@@ -4,6 +4,8 @@ import "./CrowdsaleToken.sol";
 import "./CrowdsaleAccessPolicy.sol";
 import "./../Utils/Math.sol";
 
+// TODO: Test refund of suspended amount
+// TODO: External refund tests
 // TODO: KYC event
 // TODO: Gas price and limit
 // TODO: Test against common security issues
@@ -259,13 +261,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         require(state == CrowdsaleState.Ended);
         require(crowdsaleEndedSuccessfully == false);
         
-        if (participants[participant].directWeiAmount > 0) {
-            uint refundableAmount = participants[participant].directWeiAmount;
-            participants[participant].directWeiAmount = 0;
-
-            participant.transfer(refundableAmount);
-        }
-
+        directRefund(participant);
         externalRefund(participant);
     }
 
@@ -352,18 +348,29 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         uint refundableTokenAmount = token.returnTokens(participant);
         tokensExchanged = tokensExchanged.sub(refundableTokenAmount);
 
-        uint refundAmount = participants[participant].directWeiAmount;
-        participants[participant].directWeiAmount = 0;
-
-        participant.transfer(refundAmount);
-
+        directRefund(participant);
         externalRefund(participant);
     }
 
+    function directRefund(address participant) internal {
+        uint amount = participants[participant].directWeiAmount;
+        amount = amount.add(participants[participant].suspendedDirectWeiAmount);
+
+        if (amount > 0) {
+            participant.transfer(amount);
+            participants[participant].directWeiAmount = 0;
+            participants[participant].suspendedDirectWeiAmount = 0;
+        }
+    }
+
     function externalRefund(address participant) internal {
-        if (participants[participant].externalWeiAmount > 0) {
-            ExternalRefund(participant, participants[participant].externalWeiAmount);
+        uint amount = participants[participant].externalWeiAmount;
+        amount = amount.add(participants[participant].suspendedExternalWeiAmount);
+
+        if (amount > 0) {
+            ExternalRefund(participant, amount);
             participants[participant].externalWeiAmount = 0;
+            participants[participant].suspendedExternalWeiAmount = 0;
         }
     }
 
