@@ -40,10 +40,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
      */
     uint public minSale = 0.01 ether;
     
-    /**
-     * Number of wei that has been gathered in sales so far
-     */
-    uint public weiRaised = 0;
+    uint public suspendedAmount = 0;
 
     /**
      * Token that will be sold
@@ -86,6 +83,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
 
         if (totalWeiSpent > maxUnidentifiedAmount && ! participants[sender].identified) {
             if (direct) {
+                suspendedAmount = suspendedAmount.add(weiSent);
                 participants[sender].suspendedDirectWeiAmount = participants[sender].suspendedDirectWeiAmount.add(weiSent);
             } else {
                 participants[sender].suspendedExternalWeiAmount = participants[sender].suspendedExternalWeiAmount.add(weiSent);
@@ -149,8 +147,6 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         } else {
             participants[sender].externalWeiAmount = participants[sender].externalWeiAmount.add(weiExchanged);
         }
-        
-        weiRaised = weiRaised + weiExchanged;
 
         transferTokens(sender, tokens);
     }
@@ -208,7 +204,8 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         crowdsaleEndedSuccessfully = success;
 
         if (success && this.balance > 0) {
-            owner.transfer(this.balance); // TODO: Do not send suspended resources
+            uint amount = this.balance.sub(suspendedAmount);
+            owner.transfer(amount);
         }
     }
 
