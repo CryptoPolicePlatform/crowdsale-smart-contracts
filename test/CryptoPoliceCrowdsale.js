@@ -306,7 +306,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                         return CryptoPoliceOfficerToken.deployed().then(function(token) {
                             return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
                                 Assert.equal("0", tokenCount.toString());
-                                return crowdsale.markAddressIdentified(accounts[1]).then(function() {
+                                return crowdsale.markParticipantIdentifiend(accounts[1]).then(function() {
                                     return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
                                         Assert.equal(minCap.toString(), tokenCount.toString());
                                     })

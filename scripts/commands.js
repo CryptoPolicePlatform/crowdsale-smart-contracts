@@ -102,9 +102,9 @@ const commands = {
             return crowdsale.endCrowdsale(params[0] == "true" || params[0] == "1")
         })
     },
-    MarkAddressIdentified: function (callback, artifacts, params) {
+    MarkParticipantIdentifiend: function (callback, artifacts, params) {
         return artifacts.crowdsale.then(function(crowdsale) {
-            return crowdsale.markAddressIdentified(params[0])
+            return crowdsale.markParticipantIdentifiend(params[0])
         })
     },
     ReturnSuspendedFunds: function (callback, artifacts, params) {

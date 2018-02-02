@@ -71,7 +71,7 @@ contract("All", function (accounts) {
         })
     });
     it("Mark address identified", function () {
-        return runCommand("MarkAddressIdentified", [accounts[1]]).then(function () {
+        return runCommand("MarkParticipantIdentifiend", [accounts[1]]).then(function () {
             return CryptoPoliceCrowdsale.deployed().then(function (crowdsale) {
                 return crowdsale.participants.call(accounts[1]).then(function (result) {
                     Assert.ok(result[0])

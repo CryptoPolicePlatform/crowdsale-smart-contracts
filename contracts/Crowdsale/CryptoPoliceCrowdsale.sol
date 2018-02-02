@@ -72,7 +72,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
     function () public payable {
         if (state == CrowdsaleState.Ended) {
             msg.sender.transfer(msg.value);
-            refundContribution(msg.sender);
+            refundParticipant(msg.sender);
         } else {
             require(state == CrowdsaleState.Started);
             exchange(msg.sender, msg.value, true);
@@ -217,18 +217,18 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         }
     }
 
-    function markAddressIdentified(address _address) public markAddressIdentifiedPolicy notEnded {
-        participants[_address].identified = true;
+    function markParticipantIdentifiend(address participant) public markAddressIdentifiedPolicy notEnded {
+        participants[participant].identified = true;
 
-        if (participants[_address].suspendedDirectWeiAmount > 0) {
-            exchange(_address, participants[_address].suspendedDirectWeiAmount, true);
-            suspendedAmount = suspendedAmount.sub(participants[_address].suspendedDirectWeiAmount);
-            participants[_address].suspendedDirectWeiAmount = 0;
+        if (participants[participant].suspendedDirectWeiAmount > 0) {
+            exchange(participant, participants[participant].suspendedDirectWeiAmount, true);
+            suspendedAmount = suspendedAmount.sub(participants[participant].suspendedDirectWeiAmount);
+            participants[participant].suspendedDirectWeiAmount = 0;
         }
 
-        if (participants[_address].suspendedExternalWeiAmount > 0) {
-            exchange(_address, participants[_address].suspendedExternalWeiAmount, false);
-            participants[_address].suspendedExternalWeiAmount = 0;
+        if (participants[participant].suspendedExternalWeiAmount > 0) {
+            exchange(participant, participants[participant].suspendedExternalWeiAmount, false);
+            participants[participant].suspendedExternalWeiAmount = 0;
         }
     }
 
@@ -257,7 +257,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
     /**
      * Allow crowdsale participant to get refunded
      */
-    function refundContribution(address participant) internal {
+    function refundParticipant(address participant) internal {
         require(state == CrowdsaleState.Ended);
         require(crowdsaleEndedSuccessfully == false);
         
@@ -266,7 +266,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
     }
 
     function refund(address participant) public grantOwner {
-        refundContribution(participant);
+        refundParticipant(participant);
     }
 
     function burnLeftoverTokens(uint8 percentage) public grantOwner {
