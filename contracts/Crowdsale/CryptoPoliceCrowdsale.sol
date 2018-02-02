@@ -28,6 +28,8 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         uint suspendedExternalWeiAmount;
     }
 
+    event ExternalRefund(address participant, uint amount);
+
     uint public constant MIN_CAP = 12500000 * 10**18;
     uint public constant SOFT_CAP = 51000000 * 10**18;
     uint public constant POWER_CAP = 204000000 * 10**18;
@@ -75,18 +77,18 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         }
     }
 
-    function exchange(address sender, uint weiSent, bool direct) internal {
+    function exchange(address participant, uint weiSent, bool direct) internal {
         require(weiSent >= minSale);
 
-        uint totalWeiSpent = participants[sender].directWeiAmount.add(weiSent);
-        totalWeiSpent = totalWeiSpent.add(participants[sender].externalWeiAmount);
+        uint totalWeiSpent = participants[participant].directWeiAmount.add(weiSent);
+        totalWeiSpent = totalWeiSpent.add(participants[participant].externalWeiAmount);
 
-        if (totalWeiSpent > maxUnidentifiedAmount && ! participants[sender].identified) {
+        if (totalWeiSpent > maxUnidentifiedAmount && ! participants[participant].identified) {
             if (direct) {
                 suspendedAmount = suspendedAmount.add(weiSent);
-                participants[sender].suspendedDirectWeiAmount = participants[sender].suspendedDirectWeiAmount.add(weiSent);
+                participants[participant].suspendedDirectWeiAmount = participants[participant].suspendedDirectWeiAmount.add(weiSent);
             } else {
-                participants[sender].suspendedExternalWeiAmount = participants[sender].suspendedExternalWeiAmount.add(weiSent);
+                participants[participant].suspendedExternalWeiAmount = participants[participant].suspendedExternalWeiAmount.add(weiSent);
             }
             return;
         }
@@ -138,17 +140,21 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
             break;
         }
 
-        if (weiRemaining > 0 && direct) {
-            sender.transfer(weiRemaining);
+        if (weiRemaining > 0) {
+            if (direct) {
+                participant.transfer(weiRemaining);
+            } else {
+                ExternalRefund(participant, weiRemaining);
+            }
         }
 
         if (direct) {
-            participants[sender].directWeiAmount = participants[sender].directWeiAmount.add(weiExchanged);
+            participants[participant].directWeiAmount = participants[participant].directWeiAmount.add(weiExchanged);
         } else {
-            participants[sender].externalWeiAmount = participants[sender].externalWeiAmount.add(weiExchanged);
+            participants[participant].externalWeiAmount = participants[participant].externalWeiAmount.add(weiExchanged);
         }
 
-        transferTokens(sender, tokens);
+        transferTokens(participant, tokens);
     }
 
     function transferTokens(address recipient, uint amount) internal {
@@ -251,13 +257,16 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
      */
     function refundContribution(address participant) internal {
         require(state == CrowdsaleState.Ended);
-        require(crowdsaleEndedSuccessfully == false); // TODO: Handle suspended resources
-        require(participants[participant].directWeiAmount > 0);
+        require(crowdsaleEndedSuccessfully == false);
         
-        uint refundableAmount = participants[participant].directWeiAmount;
-        participants[participant].directWeiAmount = 0;
+        if (participants[participant].directWeiAmount > 0) {
+            uint refundableAmount = participants[participant].directWeiAmount;
+            participants[participant].directWeiAmount = 0;
 
-        participant.transfer(refundableAmount);
+            participant.transfer(refundableAmount);
+        }
+
+        externalRefund(participant);
     }
 
     function refund(address participant) public grantOwner {
@@ -337,16 +346,25 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         assert(false);
     }
 
-    function moneyBack(address _address) public notEnded moneyBackPolicy {
-        require(participants[_address].directWeiAmount > 0);
+    function moneyBack(address participant) public notEnded moneyBackPolicy {
+        require(participants[participant].directWeiAmount > 0);
 
-        uint refundableTokenAmount = token.returnTokens(_address);
+        uint refundableTokenAmount = token.returnTokens(participant);
         tokensExchanged = tokensExchanged.sub(refundableTokenAmount);
 
-        uint refundAmount = participants[_address].directWeiAmount;
-        participants[_address].directWeiAmount = 0;
+        uint refundAmount = participants[participant].directWeiAmount;
+        participants[participant].directWeiAmount = 0;
 
-        _address.transfer(refundAmount);   
+        participant.transfer(refundAmount);
+
+        externalRefund(participant);
+    }
+
+    function externalRefund(address participant) internal {
+        if (participants[participant].externalWeiAmount > 0) {
+            ExternalRefund(participant, participants[participant].externalWeiAmount);
+            participants[participant].externalWeiAmount = 0;
+        }
     }
 
     function getHardCap() public pure returns(uint) {
