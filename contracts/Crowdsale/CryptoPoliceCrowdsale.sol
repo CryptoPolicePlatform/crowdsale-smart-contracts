@@ -4,6 +4,7 @@ import "./CrowdsaleToken.sol";
 import "./CrowdsaleAccessPolicy.sol";
 import "./../Utils/Math.sol";
 
+// TODO: KYC event
 // TODO: Gas price and limit
 // TODO: Test against common security issues
 // TODO: send back tokens to owner in case of failure?
@@ -19,7 +20,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         uint price;
     }
 
-    struct Investor {
+    struct Participant {
         bool identified;
         uint directWeiAmount;
         uint externalWeiAmount;
@@ -54,13 +55,13 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
      */
     CrowdsaleState public state = CrowdsaleState.Pending;
 
-    mapping(address => Investor) public investors;
+    mapping(address => Participant) public participants;
 
     ExchangeRate[4] public exchangeRates;
     
     bool public crowdsaleEndedSuccessfully = false;
 
-    uint public maxUnidentifiedInvestment = 25 ether;
+    uint public maxUnidentifiedAmount = 25 ether;
 
     mapping(bytes32 => string) public externalPaymentReferences;
 
@@ -76,18 +77,18 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
             exchange(msg.sender, msg.value, true);
         }
     }
-// TODO: Case where eth is sent when hard cap is reached
+
     function exchange(address sender, uint weiSent, bool direct) internal {
         require(weiSent >= minSale);
 
-        uint totalWeiSpent = investors[sender].directWeiAmount.add(weiSent);
-        totalWeiSpent = totalWeiSpent.add(investors[sender].externalWeiAmount);
+        uint totalWeiSpent = participants[sender].directWeiAmount.add(weiSent);
+        totalWeiSpent = totalWeiSpent.add(participants[sender].externalWeiAmount);
 
-        if (totalWeiSpent > maxUnidentifiedInvestment && ! investors[sender].identified) {
+        if (totalWeiSpent > maxUnidentifiedAmount && ! participants[sender].identified) {
             if (direct) {
-                investors[sender].suspendedDirectWeiAmount = investors[sender].suspendedDirectWeiAmount.add(weiSent);
+                participants[sender].suspendedDirectWeiAmount = participants[sender].suspendedDirectWeiAmount.add(weiSent);
             } else {
-                investors[sender].suspendedExternalWeiAmount = investors[sender].suspendedExternalWeiAmount.add(weiSent);
+                participants[sender].suspendedExternalWeiAmount = participants[sender].suspendedExternalWeiAmount.add(weiSent);
             }
             return;
         }
@@ -144,9 +145,9 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         }
 
         if (direct) {
-            investors[sender].directWeiAmount = investors[sender].directWeiAmount.add(weiExchanged);
+            participants[sender].directWeiAmount = participants[sender].directWeiAmount.add(weiExchanged);
         } else {
-            investors[sender].externalWeiAmount = investors[sender].externalWeiAmount.add(weiExchanged);
+            participants[sender].externalWeiAmount = participants[sender].externalWeiAmount.add(weiExchanged);
         }
         
         weiRaised = weiRaised + weiExchanged;
@@ -212,32 +213,32 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
     }
 
     function markAddressIdentified(address _address) public markAddressIdentifiedPolicy notEnded {
-        investors[_address].identified = true;
+        participants[_address].identified = true;
 
-        if (investors[_address].suspendedDirectWeiAmount > 0) {
-            exchange(_address, investors[_address].suspendedDirectWeiAmount, true);
-            investors[_address].suspendedDirectWeiAmount = 0;
+        if (participants[_address].suspendedDirectWeiAmount > 0) {
+            exchange(_address, participants[_address].suspendedDirectWeiAmount, true);
+            participants[_address].suspendedDirectWeiAmount = 0;
         }
 
-        if (investors[_address].suspendedExternalWeiAmount > 0) {
-            exchange(_address, investors[_address].suspendedExternalWeiAmount, false);
-            investors[_address].suspendedExternalWeiAmount = 0;
+        if (participants[_address].suspendedExternalWeiAmount > 0) {
+            exchange(_address, participants[_address].suspendedExternalWeiAmount, false);
+            participants[_address].suspendedExternalWeiAmount = 0;
         }
     }
 
     function returnSuspendedFunds(address _address) public returnSuspendedFundsPolicy {
-        require(investors[_address].suspendedDirectWeiAmount > 0);
+        require(participants[_address].suspendedDirectWeiAmount > 0);
 
-        uint amount = investors[_address].suspendedDirectWeiAmount;
-        investors[_address].suspendedDirectWeiAmount = 0;
-        investors[_address].suspendedExternalWeiAmount = 0;
+        uint amount = participants[_address].suspendedDirectWeiAmount;
+        participants[_address].suspendedDirectWeiAmount = 0;
+        participants[_address].suspendedExternalWeiAmount = 0;
         
         _address.transfer(amount);
     }
 
-    function updateMaxUnidentifiedInvestment(uint maxWei) public grantOwner notEnded {
+    function updatemaxUnidentifiedAmount(uint maxWei) public grantOwner notEnded {
         require(maxWei >= minSale);
-        maxUnidentifiedInvestment = maxWei;
+        maxUnidentifiedAmount = maxWei;
     }
 
     function updateMinSale(uint weiAmount) public grantOwner {
@@ -250,10 +251,10 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
     function refundContribution(address participant) internal {
         require(state == CrowdsaleState.Ended);
         require(crowdsaleEndedSuccessfully == false); // TODO: Handle suspended resources
-        require(investors[participant].directWeiAmount > 0);
+        require(participants[participant].directWeiAmount > 0);
         
-        uint refundableAmount = investors[participant].directWeiAmount;
-        investors[participant].directWeiAmount = 0;
+        uint refundableAmount = participants[participant].directWeiAmount;
+        participants[participant].directWeiAmount = 0;
 
         participant.transfer(refundableAmount);
     }
@@ -336,13 +337,13 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
     }
 
     function moneyBack(address _address) public notEnded moneyBackPolicy {
-        require(investors[_address].directWeiAmount > 0);
+        require(participants[_address].directWeiAmount > 0);
 
         uint refundableTokenAmount = token.returnTokens(_address);
         tokensExchanged = tokensExchanged.sub(refundableTokenAmount);
 
-        uint refundAmount = investors[_address].directWeiAmount;
-        investors[_address].directWeiAmount = 0;
+        uint refundAmount = participants[_address].directWeiAmount;
+        participants[_address].directWeiAmount = 0;
 
         _address.transfer(refundAmount);   
     }
