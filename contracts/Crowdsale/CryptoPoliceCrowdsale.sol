@@ -214,6 +214,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
 
         if (participants[_address].suspendedDirectWeiAmount > 0) {
             exchange(_address, participants[_address].suspendedDirectWeiAmount, true);
+            suspendedAmount = suspendedAmount.sub(participants[_address].suspendedDirectWeiAmount);
             participants[_address].suspendedDirectWeiAmount = 0;
         }
 
@@ -230,7 +231,10 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         participants[_address].suspendedDirectWeiAmount = 0;
         participants[_address].suspendedExternalWeiAmount = 0;
         
-        _address.transfer(amount);
+        if (amount > 0) {
+            _address.transfer(amount);
+            suspendedAmount = suspendedAmount.sub(amount);
+        }
     }
 
     function updatemaxUnidentifiedAmount(uint maxWei) public grantOwner notEnded {
