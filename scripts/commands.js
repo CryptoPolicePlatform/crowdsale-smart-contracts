@@ -112,9 +112,9 @@ const commands = {
             return crowdsale.returnSuspendedFunds(params[0])
         })
     },
-    UpdateMaxUnidentifiedInvestment: function (callback, artifacts, params) {
+    UpdateMaxUnidentifiedAmount: function (callback, artifacts, params) {
         return artifacts.crowdsale.then(function(crowdsale) {
-            return crowdsale.updateMaxUnidentifiedInvestment(params[0])
+            return crowdsale.updatemaxUnidentifiedAmount(params[0])
         })
     },
     UpdateMinSale: function (callback, artifacts, params) {

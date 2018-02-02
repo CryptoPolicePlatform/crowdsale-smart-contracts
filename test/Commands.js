@@ -73,7 +73,7 @@ contract("All", function (accounts) {
     it("Mark address identified", function () {
         return runCommand("MarkAddressIdentified", [accounts[1]]).then(function () {
             return CryptoPoliceCrowdsale.deployed().then(function (crowdsale) {
-                return crowdsale.investors.call(accounts[1]).then(function (result) {
+                return crowdsale.participants.call(accounts[1]).then(function (result) {
                     Assert.ok(result[0])
                 })
             })
@@ -89,11 +89,11 @@ contract("All", function (accounts) {
             })
         })
     });
-    it("Update max unidentified investment", function () {
+    it("Update max unidentified amount", function () {
         const newValue = new BigNumber("11e+18");
-        return runCommand("UpdateMaxUnidentifiedInvestment", [newValue]).then(function () {
+        return runCommand("UpdateMaxUnidentifiedAmount", [newValue]).then(function () {
             return CryptoPoliceCrowdsale.deployed().then(function (crowdsale) {
-                return crowdsale.maxUnidentifiedInvestment.call().then(function (value) {
+                return crowdsale.maxUnidentifiedAmount.call().then(function (value) {
                     Assert.equal(value.toString(), newValue.toString());
                 })
             })
@@ -113,7 +113,7 @@ contract("All", function (accounts) {
         const amount = new BigNumber("10e+18");
         return runCommand("ProxyExchange", [accounts[2], amount, "reference", "checksum"]).then(function () {
             return CryptoPoliceCrowdsale.deployed().then(function (crowdsale) {
-                return crowdsale.investors.call(accounts[2]).then(function (result) {
+                return crowdsale.participants.call(accounts[2]).then(function (result) {
                     Assert.equal(result[2].toString(), amount.toString());
                 })
             })

@@ -297,11 +297,11 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
     it("Large exchange happens only after transaction is verified", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.updateExchangeRate(0, minCap, maxUnidentifiedInvestment.add(1)).then(function() {
-                return crowdsale.updateMaxUnidentifiedInvestment(maxUnidentifiedInvestment).then(function() {
+            return crowdsale.updateExchangeRate(0, minCap, maxUnidentifiedAmount.add(1)).then(function() {
+                return crowdsale.updatemaxUnidentifiedAmount(maxUnidentifiedAmount).then(function() {
                     return crowdsale.sendTransaction({
                         from: accounts[1],
-                        value: maxUnidentifiedInvestment.add(1)
+                        value: maxUnidentifiedAmount.add(1)
                     }).then(function() {
                         return CryptoPoliceOfficerToken.deployed().then(function(token) {
                             return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
@@ -323,9 +323,9 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
     it("Return suspended funds once", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            const transferAmount = maxUnidentifiedInvestment.add(1);
+            const transferAmount = maxUnidentifiedAmount.add(1);
             return crowdsale.updateExchangeRate(0, minCap, transferAmount).then(function() {
-                return crowdsale.updateMaxUnidentifiedInvestment(maxUnidentifiedInvestment).then(function() {
+                return crowdsale.updatemaxUnidentifiedAmount(maxUnidentifiedAmount).then(function() {
                     return crowdsale.sendTransaction({
                         from: accounts[1],
                         value: transferAmount
