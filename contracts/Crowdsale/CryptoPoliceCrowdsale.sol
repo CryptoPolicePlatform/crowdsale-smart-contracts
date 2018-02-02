@@ -140,7 +140,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
             break;
         }
 
-        if (weiRemaining > 0) { // TODO: Only direct
+        if (weiRemaining > 0 && direct) {
             sender.transfer(weiRemaining);
         }
 
