@@ -70,7 +70,7 @@ contract("All", function (accounts) {
             })
         })
     });
-    it("Mark address identified", function () {
+    it("Mark participant identified", function () {
         return runCommand("MarkParticipantIdentifiend", [accounts[1]]).then(function () {
             return CryptoPoliceCrowdsale.deployed().then(function (crowdsale) {
                 return crowdsale.participants.call(accounts[1]).then(function (result) {
