@@ -461,3 +461,24 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         })
     })
 });
+contract('CryptoPoliceCrowdsale', function(accounts) {
+    before(startCrowdsale);
+    it("Balance not changed when proxy exchange has reminder", function() {
+        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+            return crowdsale.updateExchangeRate(0, 1, minSale).then(function() {
+                // add eth to contract's balance
+                return crowdsale.sendTransaction({
+                    from: accounts[1],
+                    value: minSale
+                }).then(function () {
+                    const balanceBefore = web3.eth.getBalance(accounts[2]);
+                    return crowdsale.proxyExchange(accounts[2], minSale.add(1), "r", "c")
+                        .then(function() {
+                            const balanceAfter = web3.eth.getBalance(accounts[2]);
+                            Assert.equal(balanceBefore.toString(), balanceAfter.toString());
+                        })
+                })
+            })
+        })
+    })
+});
