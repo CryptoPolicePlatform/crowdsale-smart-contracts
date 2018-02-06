@@ -4,6 +4,7 @@ import "./CrowdsaleToken.sol";
 import "./CrowdsaleAccessPolicy.sol";
 import "./../Utils/Math.sol";
 
+// TODO: Unidentify
 // TODO: Test fluctuating undefined payment limit
 // TODO: Test refund of suspended amount
 // TODO: External refund tests
@@ -38,7 +39,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
     uint public constant POWER_CAP = 204000000 * 10**18;
     uint public constant HARD_CAP = 510000000 * 10**18;
 
-    uint public exchangedTokenCount;
+    uint public tokensSold;
 
     /**
      * Minimum number of wei that can be exchanged for tokens
@@ -114,7 +115,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
     function exchange(address participant, uint payment, bool directPayment) internal {
         require(payment >= minSale);
 
-        var (paymentReminder, processedTokenCount, soldOut) = paymentProcessor(exchangedTokenCount, payment, 0);
+        var (paymentReminder, processedTokenCount, soldOut) = paymentProcessor(tokensSold, payment, 0);
 
         uint spent = payment - paymentReminder;
 
@@ -159,7 +160,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
             state = CrowdsaleState.SoldOut;
         }
 
-        exchangedTokenCount = exchangedTokenCount + processedTokenCount;
+        tokensSold = tokensSold + processedTokenCount;
     }
 
     function transferTokens(address recipient, uint amount) internal {
@@ -340,7 +341,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
 
     function moneyBack(address participant) public notEnded moneyBackPolicy {
         uint refundedTokenCount = token.returnTokens(participant);
-        exchangedTokenCount = exchangedTokenCount.sub(refundedTokenCount);
+        tokensSold = tokensSold.sub(refundedTokenCount);
 
         directRefund(participant);
         externalRefund(participant);
