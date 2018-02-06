@@ -298,7 +298,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     it("Large exchange happens only after transaction is verified", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
             return crowdsale.updateExchangeRate(0, minCap, unidentifiedPaymentLimit.add(1)).then(function() {
-                return crowdsale.updateunidentifiedPaymentLimit(unidentifiedPaymentLimit).then(function() {
+                return crowdsale.updateUnidentifiedPaymentLimit(unidentifiedPaymentLimit).then(function() {
                     return crowdsale.sendTransaction({
                         from: accounts[1],
                         value: unidentifiedPaymentLimit.add(1)
@@ -325,7 +325,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
             const transferAmount = unidentifiedPaymentLimit.add(1);
             return crowdsale.updateExchangeRate(0, minCap, transferAmount).then(function() {
-                return crowdsale.updateunidentifiedPaymentLimit(unidentifiedPaymentLimit).then(function() {
+                return crowdsale.updateUnidentifiedPaymentLimit(unidentifiedPaymentLimit).then(function() {
                     return crowdsale.sendTransaction({
                         from: accounts[1],
                         value: transferAmount
