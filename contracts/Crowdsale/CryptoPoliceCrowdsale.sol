@@ -62,7 +62,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
     
     bool public crowdsaleEndedSuccessfully = false;
 
-    uint public maxUnidentifiedAmount = 25 ether;
+    uint public unidentifiedPaymentLimit = 1 ether;
 
     mapping(bytes32 => string) public externalPaymentReferences;
 
@@ -85,7 +85,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         uint totalWeiSpent = participants[participant].directWeiAmount.add(weiSent);
         totalWeiSpent = totalWeiSpent.add(participants[participant].externalWeiAmount);
 
-        if (totalWeiSpent > maxUnidentifiedAmount && ! participants[participant].identified) {
+        if (totalWeiSpent > unidentifiedPaymentLimit && ! participants[participant].identified) {
             if (direct) {
                 suspendedAmount = suspendedAmount.add(weiSent);
                 participants[participant].suspendedDirectWeiAmount = participants[participant].suspendedDirectWeiAmount.add(weiSent);
@@ -245,9 +245,9 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         }
     }
 
-    function updatemaxUnidentifiedAmount(uint maxWei) public grantOwner notEnded {
+    function updateunidentifiedPaymentLimit(uint maxWei) public grantOwner notEnded {
         require(maxWei >= minSale);
-        maxUnidentifiedAmount = maxWei;
+        unidentifiedPaymentLimit = maxWei;
     }
 
     function updateMinSale(uint weiAmount) public grantOwner {

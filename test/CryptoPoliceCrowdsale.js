@@ -297,11 +297,11 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
     it("Large exchange happens only after transaction is verified", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.updateExchangeRate(0, minCap, maxUnidentifiedAmount.add(1)).then(function() {
-                return crowdsale.updatemaxUnidentifiedAmount(maxUnidentifiedAmount).then(function() {
+            return crowdsale.updateExchangeRate(0, minCap, unidentifiedPaymentLimit.add(1)).then(function() {
+                return crowdsale.updateunidentifiedPaymentLimit(unidentifiedPaymentLimit).then(function() {
                     return crowdsale.sendTransaction({
                         from: accounts[1],
-                        value: maxUnidentifiedAmount.add(1)
+                        value: unidentifiedPaymentLimit.add(1)
                     }).then(function() {
                         return CryptoPoliceOfficerToken.deployed().then(function(token) {
                             return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
@@ -323,9 +323,9 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
     it("Return suspended funds once", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            const transferAmount = maxUnidentifiedAmount.add(1);
+            const transferAmount = unidentifiedPaymentLimit.add(1);
             return crowdsale.updateExchangeRate(0, minCap, transferAmount).then(function() {
-                return crowdsale.updatemaxUnidentifiedAmount(maxUnidentifiedAmount).then(function() {
+                return crowdsale.updateunidentifiedPaymentLimit(unidentifiedPaymentLimit).then(function() {
                     return crowdsale.sendTransaction({
                         from: accounts[1],
                         value: transferAmount
@@ -494,7 +494,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                 }).then(function () {
                     return crowdsale.sendTransaction({
                         from: accounts[2],
-                        value: maxUnidentifiedAmount.add(minSale)
+                        value: unidentifiedPaymentLimit.add(minSale)
                     }).then(function () {
                         return crowdsale.endCrowdsale(true, { gasPrice: gasPrice }).then(function(tx) {
                             const balanceAfter = web3.eth.getBalance(accounts[0]);
