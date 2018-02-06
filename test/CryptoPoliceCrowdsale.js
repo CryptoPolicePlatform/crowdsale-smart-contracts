@@ -449,10 +449,10 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                         const ethBalanceBefore = web3.eth.getBalance(accounts[1]);
                         return crowdsale.moneyBack(accounts[1]).then(function() {
                             return token.balanceOf.call(crowdsale.address).then(function(tokenBalanceAfter) {
-                                Assert.equal(tokenBalanceAfter.toString(), hardCap.toString());
+                                Assert.equal(tokenBalanceAfter.toString(), hardCap.toString(), "Token balance mismatch");
                                 const ethBalanceAfter = web3.eth.getBalance(accounts[1]);
                                 const ethBalanceExpected = ethBalanceBefore.add(minSale);
-                                Assert.equal(ethBalanceAfter.toString(), ethBalanceExpected.toString());
+                                Assert.equal(ethBalanceAfter.toString(), ethBalanceExpected.toString(), "Ethereum balance mismatch");
                             })
                         })
                     })

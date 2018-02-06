@@ -37,7 +37,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
     uint public constant POWER_CAP = 204000000 * 10**18;
     uint public constant HARD_CAP = 510000000 * 10**18;
 
-    uint public tokensExchanged;
+    uint public exchangedTokenCount;
 
     /**
      * Minimum number of wei that can be exchanged for tokens
@@ -79,84 +79,82 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         }
     }
 
+    function paymentProcessor(uint salePosition, uint _paymentReminder, uint _processedTokenCount)
+    internal returns (uint paymentReminder, uint processedTokenCount, bool soldOut)
+    {
+        uint currentGoal = goal(salePosition);
+        ExchangeRate memory currentExchangeRate = getExchangeRate(currentGoal);
+
+        // how many round number of portions are left for exchange at current goal
+        uint availablePortions = (currentGoal - salePosition) / currentExchangeRate.tokens;
+
+        // this indicates that leftover tokens at current goal are less than we can exchange
+        if (availablePortions == 0) {
+            if (currentGoal == HARD_CAP) {
+                return (_paymentReminder, _processedTokenCount, true);
+            }
+            // move sale position to current goal
+            return paymentProcessor(currentGoal, _paymentReminder, _processedTokenCount);
+        }
+
+        uint requestedPortions = _paymentReminder / currentExchangeRate.price;
+        uint portions = requestedPortions > availablePortions ? availablePortions : requestedPortions;
+        _processedTokenCount = _processedTokenCount + portions * currentExchangeRate.tokens;
+        _paymentReminder = _paymentReminder - portions * currentExchangeRate.price;
+        salePosition = salePosition + _processedTokenCount;
+
+        if (_paymentReminder < currentExchangeRate.price) {
+            return (_paymentReminder, _processedTokenCount, false);
+        }
+        
+        return paymentProcessor(salePosition, _paymentReminder, _processedTokenCount);
+    }
+
     function exchange(address participant, uint weiSent, bool direct) internal {
         require(weiSent >= minSale);
 
-        uint totalWeiSpent = participants[participant].directWeiAmount.add(weiSent);
-        totalWeiSpent = totalWeiSpent.add(participants[participant].externalWeiAmount);
+        var (paymentReminder, processedTokenCount, soldOut) = paymentProcessor(exchangedTokenCount, weiSent, 0);
 
-        if (totalWeiSpent > unidentifiedPaymentLimit && ! participants[participant].identified) {
-            if (direct) {
-                suspendedAmount = suspendedAmount.add(weiSent);
-                participants[participant].suspendedDirectWeiAmount = participants[participant].suspendedDirectWeiAmount.add(weiSent);
-            } else {
-                participants[participant].suspendedExternalWeiAmount = participants[participant].suspendedExternalWeiAmount.add(weiSent);
-            }
-            return;
-        }
+        uint spent = weiSent - paymentReminder;
 
-        uint tokens;
-        uint weiExchanged;
-        uint weiRemaining = weiSent;
-        uint goal = getCurrentGoal();
+        if (participants[participant].identified == false) {
+            uint spendings = participants[participant].directWeiAmount
+                .add(participants[participant].externalWeiAmount).add(spent);
 
-        while (true) {
-            ExchangeRate memory rate = getExchangeRate(goal);
-            
-            uint batches = weiRemaining / rate.price;
-            uint tokenAmount = batches.mul(rate.tokens);
-            
-            if (tokenAmount > goal) {
-                // we have to exchange remainder for current rate
-                uint remainder = goal - tokensExchanged;
+            if (spendings > unidentifiedPaymentLimit) {
+                suspendedAmount = suspendedAmount + weiSent;
 
-                // how many tokens can be exchanged
-                batches = remainder / rate.tokens;
-
-                if (batches > 0) {
-                    tokens = tokens + batches * rate.tokens;
-                    weiExchanged = batches * rate.price;
-                    weiRemaining = weiRemaining - weiExchanged;
-                    tokensExchanged = tokensExchanged + tokens;
+                if (direct) {
+                    participants[participant].suspendedDirectWeiAmount = participants[participant].suspendedDirectWeiAmount.add(weiSent);
+                } else {
+                    participants[participant].suspendedExternalWeiAmount = participants[participant].suspendedExternalWeiAmount.add(weiSent);
                 }
 
-                goal = getNextGoal(goal);
-
-                if (goal == HARD_CAP) {
-                    state = CrowdsaleState.SoldOut;
-                    break;
-                }
-                
-                continue;
+                return;
             }
-
-            tokens = tokens + tokenAmount;
-            weiExchanged = batches * rate.price;
-            weiRemaining = weiRemaining - weiExchanged;
-            tokensExchanged = tokensExchanged + tokens;
-            
-            if (goal == HARD_CAP) {
-                state = CrowdsaleState.SoldOut;
-            }
-
-            break;
         }
 
-        if (weiRemaining > 0) {
+        if (paymentReminder > 0) {
             if (direct) {
-                participant.transfer(weiRemaining);
+                participant.transfer(paymentReminder);
             } else {
-                ExternalRefund(participant, weiRemaining);
+                ExternalRefund(participant, paymentReminder);
             }
         }
 
         if (direct) {
-            participants[participant].directWeiAmount = participants[participant].directWeiAmount.add(weiExchanged);
+            participants[participant].directWeiAmount = participants[participant].directWeiAmount.add(spent);
         } else {
-            participants[participant].externalWeiAmount = participants[participant].externalWeiAmount.add(weiExchanged);
+            participants[participant].externalWeiAmount = participants[participant].externalWeiAmount.add(spent);
         }
 
-        transferTokens(participant, tokens);
+        transferTokens(participant, processedTokenCount);
+        
+        if (soldOut) {
+            state = CrowdsaleState.SoldOut;
+        }
+
+        exchangedTokenCount = exchangedTokenCount + processedTokenCount;
     }
 
     function transferTokens(address recipient, uint amount) internal {
@@ -291,8 +289,8 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         });
     }
 
-    function getExchangeRate(uint currentGoal) internal view returns (ExchangeRate) {
-        uint8 idx = capRateIndexMapping(currentGoal);
+    function getExchangeRate(uint _goal) internal view returns (ExchangeRate) {
+        uint8 idx = exchangeRateIdx(_goal);
 
         ExchangeRate storage rate = exchangeRates[idx];
 
@@ -301,40 +299,34 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         return rate;
     }
 
-    function getCurrentGoal() internal view returns (uint) {
-        if (tokensExchanged < MIN_CAP) {
+    function goal(uint salePosition) internal pure returns (uint) {
+        if (salePosition < MIN_CAP) {
             return MIN_CAP;
-        } else if (tokensExchanged < SOFT_CAP) {
+        }
+        if (salePosition < SOFT_CAP) {
             return SOFT_CAP;
-        } else if (tokensExchanged < POWER_CAP) {
+        }
+        if (salePosition < POWER_CAP) {
             return POWER_CAP;
-        } else if (tokensExchanged < HARD_CAP) {
+        }
+        if (salePosition < HARD_CAP) {
             return HARD_CAP;
         }
 
         assert(false);
     }
 
-    function getNextGoal(uint currentGoal) internal pure returns (uint) {
-        if (currentGoal == MIN_CAP) {
-            return SOFT_CAP;
-        } else if (currentGoal == SOFT_CAP) {
-            return POWER_CAP;
-        } else if (currentGoal == POWER_CAP) {
-            return HARD_CAP;
-        }
-        
-        assert(false);
-    }
-
-    function capRateIndexMapping(uint currentGoal) internal pure returns (uint8) {
-        if (currentGoal <= MIN_CAP) {
+    function exchangeRateIdx(uint _goal) internal pure returns (uint8) {
+        if (_goal == MIN_CAP) {
             return 0;
-        } else if (currentGoal <= SOFT_CAP) {
+        }
+        if (_goal == SOFT_CAP) {
             return 1;
-        } else if (currentGoal <= POWER_CAP) {
+        }
+        if (_goal == POWER_CAP) {
             return 2;
-        } else if (currentGoal > POWER_CAP && currentGoal < HARD_CAP) {
+        }
+        if (_goal == HARD_CAP) {
             return 3;
         }
 
@@ -343,10 +335,8 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
     }
 
     function moneyBack(address participant) public notEnded moneyBackPolicy {
-        require(participants[participant].directWeiAmount > 0);
-
-        uint refundableTokenAmount = token.returnTokens(participant);
-        tokensExchanged = tokensExchanged.sub(refundableTokenAmount);
+        uint refundedTokenCount = token.returnTokens(participant);
+        exchangedTokenCount = exchangedTokenCount.sub(refundedTokenCount);
 
         directRefund(participant);
         externalRefund(participant);
