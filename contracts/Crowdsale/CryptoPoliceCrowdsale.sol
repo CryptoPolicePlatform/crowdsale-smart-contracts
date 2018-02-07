@@ -64,7 +64,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
     
     bool public crowdsaleEndedSuccessfully = false;
 
-    uint public unidentifiedPaymentLimit = 1 ether;
+    uint public unidentifiedSaleLimit = 1 ether;
 
     mapping(bytes32 => string) public externalPaymentReferences;
 
@@ -127,7 +127,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
 
             // due to fluctuations of unidentified payment limit, it might not be reached
             // suspend current payment if participant currently has suspended payments or limit reached
-            if (previouslySuspended || spendings > unidentifiedPaymentLimit) {
+            if (previouslySuspended || spendings > unidentifiedSaleLimit) {
                 suspendedPayments = suspendedPayments + payment;
 
                 if (directPayment) {
@@ -249,8 +249,8 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         }
     }
 
-    function updateUnidentifiedPaymentLimit(uint limit) public grantOwner notEnded {
-        unidentifiedPaymentLimit = limit;
+    function updateUnidentifiedSaleLimit(uint limit) public grantOwner notEnded {
+        unidentifiedSaleLimit = limit;
     }
 
     function updateMinSale(uint weiAmount) public grantOwner {

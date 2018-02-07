@@ -89,11 +89,11 @@ contract("All", function (accounts) {
             })
         })
     });
-    it("Update max unidentified amount", function () {
+    it("Update undefined sale limit", function () {
         const newValue = new BigNumber("11e+18");
-        return runCommand("UpdateMaxUnidentifiedAmount", [newValue]).then(function () {
+        return runCommand("UpdateUnidentifiedSaleLimit", [newValue]).then(function () {
             return CryptoPoliceCrowdsale.deployed().then(function (crowdsale) {
-                return crowdsale.maxUnidentifiedAmount.call().then(function (value) {
+                return crowdsale.unidentifiedSaleLimit.call().then(function (value) {
                     Assert.equal(value.toString(), newValue.toString());
                 })
             })
