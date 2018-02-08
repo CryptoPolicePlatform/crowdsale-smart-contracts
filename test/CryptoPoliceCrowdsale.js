@@ -331,11 +331,11 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                         value: transferAmount
                     }).then(function() {
                         const balanceBefore = web3.eth.getBalance(accounts[1]);
-                        return crowdsale.returnSuspendedFunds(accounts[1]).then(function() {
+                        return crowdsale.returnSuspendedPayments(accounts[1]).then(function() {
                             const balanceAfter = web3.eth.getBalance(accounts[1]);
                             const expectedBalance = balanceBefore.add(transferAmount);
                             Assert.equal(balanceAfter.toString(), expectedBalance.toString());
-                            return crowdsale.returnSuspendedFunds(accounts[1]).catch(revertCallback)
+                            return crowdsale.returnSuspendedPayments(accounts[1]).catch(revertCallback)
                         })
                     })
                 })
@@ -505,5 +505,11 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                 })
             })
         })
+    })
+});
+contract('CryptoPoliceCrowdsale', function(accounts) {
+    before(startCrowdsale);
+    it("Unidentify", function() {
+        
     })
 });

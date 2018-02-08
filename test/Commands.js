@@ -127,7 +127,7 @@ contract("All", function (accounts) {
                 value: amount
             }).then(function () {
                 const balanceBefore = web3.eth.getBalance(accounts[3]);
-                return runCommand("ReturnSuspendedFunds", [accounts[3]]).then(function () {
+                return runCommand("ReturnSuspendedPayments", [accounts[3]]).then(function () {
                     const expected = balanceBefore.add(amount);
                     const balanceAfter = web3.eth.getBalance(accounts[3]);
                     Assert.equal(balanceAfter.toString(), expected);
@@ -146,7 +146,7 @@ contract("All", function (accounts) {
                 return runCommand("MoneyBack", [accounts[3]]).then(function () {
                     const balanceAfter = web3.eth.getBalance(accounts[3]);
                     const expected = balanceBefore.add(amount);
-                    Assert.equal(balanceAfter.toString(), expected);
+                    Assert.equal(balanceAfter.toString(), expected.toString());
                 })
             })
         })

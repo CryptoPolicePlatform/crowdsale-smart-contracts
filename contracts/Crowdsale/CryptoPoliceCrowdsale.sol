@@ -1,20 +1,18 @@
 pragma solidity ^0.4.19;
 
 import "./CrowdsaleToken.sol";
-import "./CrowdsaleAccessPolicy.sol";
 import "./../Utils/Math.sol";
+import "../Utils/Ownable.sol";
 
-// TODO: Unidentify
 // TODO: Test fluctuating undefined payment limit
 // TODO: Test refund of suspended amount
 // TODO: External refund tests
-// TODO: KYC event
-// TODO: Gas price and limit
+// TODO: KYC event?
+// TODO: Gas price and limit?
 // TODO: Test against common security issues
-// TODO: send back tokens to owner in case of failure?
-contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
+contract CryptoPoliceCrowdsale is Ownable {
     using MathUtils for uint;
-
+    
     enum CrowdsaleState {
         Pending, Started, Ended, Paused, SoldOut
     }
@@ -26,19 +24,26 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
 
     struct Participant {
         bool identified;
-        uint directWeiAmount;
-        uint externalWeiAmount;
+        uint processedDirectWeiAmount;
+        uint processedExternalWeiAmount;
         uint suspendedDirectWeiAmount;
         uint suspendedExternalWeiAmount;
     }
 
-    event ExternalRefund(address participant, uint amount);
+    event ProcessedPaymentReturn(address participant, uint amount, bool direct);
+    event SuspendedPaymentReturn(address participant, uint amount, bool direct);
+    event PaymentSuspended(address participant, uint amount, bool direct);
 
     uint public constant MIN_CAP = 12500000 * 10**18;
     uint public constant SOFT_CAP = 51000000 * 10**18;
     uint public constant POWER_CAP = 204000000 * 10**18;
     uint public constant HARD_CAP = 510000000 * 10**18;
 
+    address public admin;
+
+    /**
+     * Amount of tokens sold in this crowdsale
+     */
     uint public tokensSold;
 
     /**
@@ -46,6 +51,9 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
      */
     uint public minSale = 0.01 ether;
     
+    /**
+     * Amount of direct Wei paid to contract that are not yet processed
+     */
     uint public suspendedPayments = 0;
 
     /**
@@ -58,19 +66,22 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
      */
     CrowdsaleState public state = CrowdsaleState.Pending;
 
-    mapping(address => Participant) public participants;
-
+    /**
+     * List of exchange rates for each goal (cap)
+     */
     ExchangeRate[4] public exchangeRates;
     
     bool public crowdsaleEndedSuccessfully = false;
 
     uint public unidentifiedSaleLimit = 1 ether;
 
+    mapping(address => Participant) public participants;
     mapping(bytes32 => bool) public externalPaymentExistance;
     mapping(address => string[]) public externalPaymentReferences;
 
     /**
-     * Exchange tokens for Wei received
+     * 1) Process payment when crowdsale started by sending tokens in return
+     * 2) Issue a refund when crowdsale ended unsuccessfully 
      */
     function () public payable {
         if (state == CrowdsaleState.Ended) {
@@ -78,11 +89,11 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
             refundParticipant(msg.sender);
         } else {
             require(state == CrowdsaleState.Started);
-            exchange(msg.sender, msg.value, true);
+            processPayment(msg.sender, msg.value, true);
         }
     }
 
-    function paymentProcessor(uint salePosition, uint _paymentReminder, uint _processedTokenCount)
+    function exchangeCalculator(uint salePosition, uint _paymentReminder, uint _processedTokenCount)
     internal returns (uint paymentReminder, uint processedTokenCount, bool soldOut)
     {
         uint currentGoal = goal(salePosition);
@@ -97,7 +108,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
                 return (_paymentReminder, _processedTokenCount, true);
             }
             // move sale position to current goal
-            return paymentProcessor(currentGoal, _paymentReminder, _processedTokenCount);
+            return exchangeCalculator(currentGoal, _paymentReminder, _processedTokenCount);
         }
 
         uint requestedPortions = _paymentReminder / currentExchangeRate.price;
@@ -110,19 +121,19 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
             return (_paymentReminder, _processedTokenCount, false);
         }
         
-        return paymentProcessor(salePosition, _paymentReminder, _processedTokenCount);
+        return exchangeCalculator(salePosition, _paymentReminder, _processedTokenCount);
     }
 
-    function exchange(address participant, uint payment, bool directPayment) internal {
+    function processPayment(address participant, uint payment, bool directPayment) internal {
         require(payment >= minSale);
 
-        var (paymentReminder, processedTokenCount, soldOut) = paymentProcessor(tokensSold, payment, 0);
+        var (paymentReminder, processedTokenCount, soldOut) = exchangeCalculator(tokensSold, payment, 0);
 
         uint spent = payment - paymentReminder;
 
         if (participants[participant].identified == false) {
-            uint spendings = participants[participant].directWeiAmount
-                .add(participants[participant].externalWeiAmount).add(spent);
+            uint spendings = participants[participant].processedDirectWeiAmount
+                .add(participants[participant].processedExternalWeiAmount).add(spent);
 
             bool previouslySuspended = participants[participant].suspendedDirectWeiAmount > 0 || participants[participant].suspendedExternalWeiAmount > 0;
 
@@ -137,6 +148,8 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
                     participants[participant].suspendedExternalWeiAmount = participants[participant].suspendedExternalWeiAmount.add(payment);
                 }
 
+                PaymentSuspended(participant, payment, directPayment);
+
                 return;
             }
         }
@@ -145,17 +158,17 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
             if (directPayment) {
                 participant.transfer(paymentReminder);
             } else {
-                ExternalRefund(participant, paymentReminder);
+                ProcessedPaymentReturn(participant, paymentReminder, false);
             }
         }
 
         if (directPayment) {
-            participants[participant].directWeiAmount = participants[participant].directWeiAmount.add(spent);
+            participants[participant].processedDirectWeiAmount = participants[participant].processedDirectWeiAmount.add(spent);
         } else {
-            participants[participant].externalWeiAmount = participants[participant].externalWeiAmount.add(spent);
+            participants[participant].processedExternalWeiAmount = participants[participant].processedExternalWeiAmount.add(spent);
         }
 
-        transferTokens(participant, processedTokenCount);
+        require(token.transfer(participant, processedTokenCount));
         
         if (soldOut) {
             state = CrowdsaleState.SoldOut;
@@ -164,23 +177,19 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         tokensSold = tokensSold + processedTokenCount;
     }
 
-    function transferTokens(address recipient, uint amount) internal {
-        require(token.transfer(recipient, amount));
-    }
-
     /**
      * Intended when other currencies are received and owner has to carry out exchange
-     * for those funds aligned to Wei
+     * for those payments aligned to Wei
      */
     function proxyExchange(address beneficiary, uint payment, string reference, bytes32 refChecksum)
-    public proxyExchangePolicy
+    public grantOwnerOrAdmin
     {
         require(beneficiary != address(0));
         require(bytes(reference).length > 0);
         require(refChecksum.length > 0);
         require(externalPaymentExistance[refChecksum] == false);
 
-        exchange(beneficiary, payment, false);
+        processPayment(beneficiary, payment, false);
         
         externalPaymentExistance[refChecksum] = true;
         externalPaymentReferences[beneficiary].push(reference);
@@ -197,12 +206,12 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         state = CrowdsaleState.Started;
     }
 
-    function pauseCrowdsale() public pauseCrowdsalePolicy {
+    function pauseCrowdsale() public grantOwnerOrAdmin {
         require(state == CrowdsaleState.Started);
         state = CrowdsaleState.Paused;
     }
 
-    function unPauseCrowdsale() public unpauseCrowdsalePolicy {
+    function unPauseCrowdsale() public grantOwnerOrAdmin {
         require(state == CrowdsaleState.Paused);
         state = CrowdsaleState.Started;
     }
@@ -220,39 +229,31 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         }
     }
 
-    function markParticipantIdentifiend(address participant) public markParticipantIdentifiendPolicy notEnded {
+    function markParticipantIdentifiend(address participant) public grantOwnerOrAdmin notEnded {
         participants[participant].identified = true;
 
         if (participants[participant].suspendedDirectWeiAmount > 0) {
-            exchange(participant, participants[participant].suspendedDirectWeiAmount, true);
+            processPayment(participant, participants[participant].suspendedDirectWeiAmount, true);
             suspendedPayments = suspendedPayments.sub(participants[participant].suspendedDirectWeiAmount);
             participants[participant].suspendedDirectWeiAmount = 0;
         }
 
         if (participants[participant].suspendedExternalWeiAmount > 0) {
-            exchange(participant, participants[participant].suspendedExternalWeiAmount, false);
+            processPayment(participant, participants[participant].suspendedExternalWeiAmount, false);
             participants[participant].suspendedExternalWeiAmount = 0;
         }
     }
 
-    function unidentifyParticipant(address participant, bool _moneyback) public unidentifyParticipantPolicy notEnded {
+    function unidentifyParticipant(address participant, bool _moneyback) public grantOwnerOrAdmin notEnded {
         if (_moneyback) {
             moneyBack(participant);
         }
         participants[participant].identified = false;
     }
 
-    function returnSuspendedFunds(address _address) public returnSuspendedFundsPolicy {
-        require(participants[_address].suspendedDirectWeiAmount > 0);
-
-        uint amount = participants[_address].suspendedDirectWeiAmount;
-        participants[_address].suspendedDirectWeiAmount = 0;
-        participants[_address].suspendedExternalWeiAmount = 0;
-        
-        if (amount > 0) {
-            _address.transfer(amount);
-            suspendedPayments = suspendedPayments.sub(amount);
-        }
+    function returnSuspendedPayments(address participant) public grantOwnerOrAdmin {
+        returnDirectPayments(participant, false, true);
+        returnExternalPayments(participant, false, true);
     }
 
     function updateUnidentifiedSaleLimit(uint limit) public grantOwner notEnded {
@@ -270,8 +271,8 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         require(state == CrowdsaleState.Ended);
         require(crowdsaleEndedSuccessfully == false);
         
-        directRefund(participant);
-        externalRefund(participant);
+        returnDirectPayments(participant, true, true);
+        returnExternalPayments(participant, true, true);
     }
 
     function refund(address participant) public grantOwner {
@@ -290,7 +291,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         }
     }
 
-    function updateExchangeRate(uint8 idx, uint tokens, uint price) public updateExchangeRatePolicy {
+    function updateExchangeRate(uint8 idx, uint tokens, uint price) public grantOwnerOrAdmin {
         require(tokens > 0 && price > 0);
         require(idx >= 0 && idx <= 3);
 
@@ -341,38 +342,54 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
             return 3;
         }
 
-        // at this point hard cap is reached
         assert(false);
     }
 
-    function moneyBack(address participant) public notEnded moneyBackPolicy {
+    function moneyBack(address participant) public notEnded grantOwnerOrAdmin {
         uint refundedTokenCount = token.returnTokens(participant);
         tokensSold = tokensSold.sub(refundedTokenCount);
 
-        directRefund(participant);
-        externalRefund(participant);
+        returnDirectPayments(participant, true, true);
+        returnExternalPayments(participant, true, true);
     }
 
-    function directRefund(address participant) internal {
-        uint amount = participants[participant].directWeiAmount;
-        amount = amount.add(participants[participant].suspendedDirectWeiAmount);
+    function returnDirectPayments(address participant, bool processed, bool suspended) internal {
+        if (processed && participants[participant].processedDirectWeiAmount > 0) {
+            ProcessedPaymentReturn(participant, participants[participant].processedDirectWeiAmount, true);
+            participant.transfer(participants[participant].processedDirectWeiAmount);
+            participants[participant].processedDirectWeiAmount = 0;
+        }
 
-        if (amount > 0) {
-            participant.transfer(amount);
-            participants[participant].directWeiAmount = 0;
+        if (suspended && participants[participant].suspendedDirectWeiAmount > 0) {
+            SuspendedPaymentReturn(participant, participants[participant].suspendedDirectWeiAmount, true);
+            participant.transfer(participants[participant].suspendedDirectWeiAmount);
             participants[participant].suspendedDirectWeiAmount = 0;
         }
     }
 
-    function externalRefund(address participant) internal {
-        uint amount = participants[participant].externalWeiAmount;
-        amount = amount.add(participants[participant].suspendedExternalWeiAmount);
-
-        if (amount > 0) {
-            ExternalRefund(participant, amount);
-            participants[participant].externalWeiAmount = 0;
+    function returnExternalPayments(address participant, bool processed, bool suspended) internal {
+        if (processed && participants[participant].processedExternalWeiAmount > 0) {
+            ProcessedPaymentReturn(participant, participants[participant].processedExternalWeiAmount, false);
+            participants[participant].processedExternalWeiAmount = 0;
+        }
+        
+        if (suspended && participants[participant].suspendedExternalWeiAmount > 0) {
+            SuspendedPaymentReturn(participant, participants[participant].suspendedExternalWeiAmount, false);
             participants[participant].suspendedExternalWeiAmount = 0;
         }
+    }
+
+    function setAdmin(address adminAddress) public grantOwner {
+        admin = adminAddress;
+        require(isAdminSet());
+    }
+
+    function isAdminSet() internal view returns(bool) {
+        return admin != address(0);
+    }
+
+    function isAdmin() internal view returns(bool) {
+        return isAdminSet() && msg.sender == admin;
     }
 
     function getHardCap() public pure returns(uint) {
@@ -385,6 +402,11 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
 
     modifier notEnded {
         require(state != CrowdsaleState.Ended);
+        _;
+    }
+
+    modifier grantOwnerOrAdmin() {
+        require(isOwner() || isAdmin());
         _;
     }
 }

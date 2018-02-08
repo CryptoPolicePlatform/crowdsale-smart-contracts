@@ -107,9 +107,9 @@ const commands = {
             return crowdsale.markParticipantIdentifiend(params[0])
         })
     },
-    ReturnSuspendedFunds: function (callback, artifacts, params) {
+    ReturnSuspendedPayments: function (callback, artifacts, params) {
         return artifacts.crowdsale.then(function(crowdsale) {
-            return crowdsale.returnSuspendedFunds(params[0])
+            return crowdsale.returnSuspendedPayments(params[0])
         })
     },
     UpdateUnidentifiedSaleLimit: function (callback, artifacts, params) {
