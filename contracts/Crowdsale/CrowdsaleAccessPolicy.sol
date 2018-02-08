@@ -32,7 +32,12 @@ contract CrowdsaleAccessPolicy is Ownable {
         _;
     }
 
-    modifier markAddressIdentifiedPolicy {
+    modifier markParticipantIdentifiendPolicy {
+        requireOwnerOrAdmin();
+        _;
+    }
+
+    modifier unidentifyParticipantPolicy {
         requireOwnerOrAdmin();
         _;
     }

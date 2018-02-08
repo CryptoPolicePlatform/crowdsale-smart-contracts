@@ -235,6 +235,13 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         }
     }
 
+    function unidentifyParticipant(address participant, bool _moneyback) public unidentifyParticipantPolicy notEnded {
+        if (_moneyback) {
+            moneyBack(participant);
+        }
+        participants[participant].identified = false;
+    }
+
     function returnSuspendedFunds(address _address) public returnSuspendedFundsPolicy {
         require(participants[_address].suspendedDirectWeiAmount > 0);
 
