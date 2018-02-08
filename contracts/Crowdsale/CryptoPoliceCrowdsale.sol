@@ -220,7 +220,7 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         }
     }
 
-    function markParticipantIdentifiend(address participant) public markAddressIdentifiedPolicy notEnded {
+    function markParticipantIdentifiend(address participant) public markParticipantIdentifiendPolicy notEnded {
         participants[participant].identified = true;
 
         if (participants[participant].suspendedDirectWeiAmount > 0) {
