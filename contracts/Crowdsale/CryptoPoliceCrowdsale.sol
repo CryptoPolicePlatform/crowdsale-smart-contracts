@@ -66,7 +66,8 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
 
     uint public unidentifiedSaleLimit = 1 ether;
 
-    mapping(bytes32 => string) public externalPaymentReferences;
+    mapping(bytes32 => bool) public externalPaymentExistance;
+    mapping(address => string[]) public externalPaymentReferences;
 
     /**
      * Exchange tokens for Wei received
@@ -177,14 +178,12 @@ contract CryptoPoliceCrowdsale is CrowdsaleAccessPolicy {
         require(beneficiary != address(0));
         require(bytes(reference).length > 0);
         require(refChecksum.length > 0);
-
-        string storage epr = externalPaymentReferences[refChecksum];
-
-        require(bytes(epr).length == 0);
+        require(externalPaymentExistance[refChecksum] == false);
 
         exchange(beneficiary, payment, false);
         
-        externalPaymentReferences[refChecksum] = reference;
+        externalPaymentExistance[refChecksum] = true;
+        externalPaymentReferences[beneficiary].push(reference);
     }
 
     /**
