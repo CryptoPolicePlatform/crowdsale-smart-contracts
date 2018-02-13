@@ -94,6 +94,8 @@ contract CryptoPoliceCrowdsale is Ownable {
 
     mapping(address => bytes32[]) public participantSuspendedExternalPaymentDescriptions;
 
+    bool public revertSuspendedPayment = false;
+
     /**
      * 1) Process payment when crowdsale started by sending tokens in return
      * 2) Issue a refund when crowdsale ended unsuccessfully 
@@ -169,6 +171,8 @@ contract CryptoPoliceCrowdsale is Ownable {
             // due to fluctuations of unidentified payment limit, it might not be reached
             // suspend current payment if participant currently has suspended payments or limit reached
             if (hasSuspendedPayments || spendings > unidentifiedSaleLimit) {
+                require(revertSuspendedPayment == false);
+
                 suspendedPayments = suspendedPayments + payment;
 
                 if (directPayment) {
@@ -389,6 +393,10 @@ contract CryptoPoliceCrowdsale is Ownable {
 
         returnDirectPayments(participant, true, true);
         returnExternalPayments(participant, true, true);
+    }
+
+    function updateRevertSuspendedPayment(bool value) public grantOwnerOrAdmin {
+        revertSuspendedPayment = value;
     }
 
     /**
