@@ -1,8 +1,8 @@
-pragma solidity ^0.4.19;
+pragma solidity ^0.4.20;
 
 interface CrowdsaleToken {
-    function transfer(address destination, uint amount) public returns (bool);
-    function balanceOf(address account) public constant returns (uint);
-    function burn(uint amount) public;
-    function returnTokens(address _address) public returns (uint);
+    function transfer(address destination, uint amount) external returns (bool);
+    function balanceOf(address account) external constant returns (uint);
+    function burn(uint amount) external;
+    function returnTokens(address _address) external returns (uint);
 }
