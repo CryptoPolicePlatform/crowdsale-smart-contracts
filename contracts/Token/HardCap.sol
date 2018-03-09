@@ -1,5 +1,5 @@
 pragma solidity ^0.4.20;
 
 interface HardCap {
-    function getHardCap() public pure returns(uint);
+    function getHardCap() external pure returns(uint);
 }
