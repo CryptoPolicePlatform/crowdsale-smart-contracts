@@ -95,6 +95,8 @@ contract CryptoPoliceCrowdsale is Ownable {
 
     mapping(address => bytes32[]) public participantSuspendedExternalPaymentChecksums;
 
+    mapping(address => bool) public bannedParticipants;
+
     bool public revertSuspendedPayment = false;
 
     /**
@@ -155,6 +157,7 @@ contract CryptoPoliceCrowdsale is Ownable {
 
     function processPayment(address participant, uint payment, bytes32 externalPaymentChecksum) internal {
         require(payment >= minSale);
+        require(bannedParticipants[participant] == false);
 
         uint paymentReminder;
         uint processedTokenCount;
@@ -345,6 +348,17 @@ contract CryptoPoliceCrowdsale is Ownable {
             tokens: tokens,
             price: price
         });
+    }
+
+    function ban(address participant, bool _moneyback) public grantOwnerOrAdmin {
+        if (_moneyback) {
+            moneyBack(participant);
+        }
+        bannedParticipants[participant] = true;
+    }
+
+    function unBan(address participant) public grantOwnerOrAdmin {
+        bannedParticipants[participant] = false;
     }
 
     function getExchangeRate(uint _goal) internal view returns (ExchangeRate) {
