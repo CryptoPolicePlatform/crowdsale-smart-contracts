@@ -32,6 +32,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     }
 
     event ExternalPaymentReminder(uint weiAmount, bytes32 paymentChecksum);
+    event PaymentSuspended(address participant);
 
     uint public constant MIN_CAP = 12500000 * 10**18;
     uint public constant SOFT_CAP = 51000000 * 10**18;
@@ -92,7 +93,7 @@ contract CryptoPoliceCrowdsale is Ownable {
      */
     mapping(address => bytes32[]) public participantExternalPaymentChecksums;
 
-    mapping(address => bytes32[]) public participantSuspendedExternalPaymentDescriptions;
+    mapping(address => bytes32[]) public participantSuspendedExternalPaymentChecksums;
 
     bool public revertSuspendedPayment = false;
 
@@ -155,7 +156,11 @@ contract CryptoPoliceCrowdsale is Ownable {
     function processPayment(address participant, uint payment, bytes32 externalPaymentChecksum) internal {
         require(payment >= minSale);
 
-        var (paymentReminder, processedTokenCount, soldOut) = exchangeCalculator(tokensSold, payment, 0);
+        uint paymentReminder;
+        uint processedTokenCount;
+        bool soldOut;
+
+        (paymentReminder, processedTokenCount, soldOut) = exchangeCalculator(tokensSold, payment, 0);
 
         // how much was actually spent from this payment
         uint spent = payment - paymentReminder;
@@ -178,10 +183,12 @@ contract CryptoPoliceCrowdsale is Ownable {
                 if (directPayment) {
                     participants[participant].suspendedDirectWeiAmount = participants[participant].suspendedDirectWeiAmount.add(payment);
                 } else {
-                    participantSuspendedExternalPaymentDescriptions[participant].push(externalPaymentChecksum);
+                    participantSuspendedExternalPaymentChecksums[participant].push(externalPaymentChecksum);
                     participants[participant].suspendedExternalWeiAmount = participants[participant].suspendedExternalWeiAmount.add(payment);
                 }
-                // TODO: Notify that payment is suspended?
+
+                PaymentSuspended(participant);
+
                 return;
             }
         }
@@ -274,12 +281,12 @@ contract CryptoPoliceCrowdsale is Ownable {
         }
 
         if (participants[participant].suspendedExternalWeiAmount > 0) {
-            var payments = participantSuspendedExternalPaymentDescriptions[participant];
+            bytes32[] storage payments = participantSuspendedExternalPaymentChecksums[participant];
             for (uint i = 0; i < payments.length; i++) {
                 processPayment(participant, participants[participant].suspendedExternalWeiAmount, payments[i]);
             }
             participants[participant].suspendedExternalWeiAmount = 0;
-            participantSuspendedExternalPaymentDescriptions[participant] = new bytes32[](0);
+            participantSuspendedExternalPaymentChecksums[participant] = new bytes32[](0);
         }
     }
 
