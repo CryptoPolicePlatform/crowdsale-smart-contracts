@@ -156,5 +156,10 @@ const commands = {
         return artifacts.crowdsale.then(function(crowdsale) {
             return crowdsale.refund(params[0])
         })
+    },
+    Ban: function (callback, artifacts, params) {
+        return artifacts.crowdsale.then(function(crowdsale) {
+            return crowdsale.ban(params[0], params[1])
+        })
     }
 };
