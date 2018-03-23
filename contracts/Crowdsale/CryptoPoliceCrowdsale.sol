@@ -144,15 +144,15 @@ contract CryptoPoliceCrowdsale is Ownable {
 
         uint requestedPortions = _paymentReminder / currentExchangeRate.price;
         uint portions = requestedPortions > availablePortions ? availablePortions : requestedPortions;
-        _processedTokenCount = _processedTokenCount + portions * currentExchangeRate.tokens;
-        _paymentReminder = _paymentReminder - portions * currentExchangeRate.price;
-        salePosition = salePosition + _processedTokenCount;
+        uint newProcessedTokenCount = _processedTokenCount + portions * currentExchangeRate.tokens;
+        uint newPaymentReminder = _paymentReminder - portions * currentExchangeRate.price;
+        uint newSalePosition = salePosition + newProcessedTokenCount;
 
-        if (_paymentReminder < currentExchangeRate.price) {
-            return (_paymentReminder, _processedTokenCount, false);
+        if (newPaymentReminder < currentExchangeRate.price) {
+            return (newPaymentReminder, newProcessedTokenCount, false);
         }
         
-        return exchangeCalculator(salePosition, _paymentReminder, _processedTokenCount);
+        return exchangeCalculator(newSalePosition, newPaymentReminder, newProcessedTokenCount);
     }
 
     function processPayment(address participant, uint payment, bytes32 externalPaymentChecksum) internal {
