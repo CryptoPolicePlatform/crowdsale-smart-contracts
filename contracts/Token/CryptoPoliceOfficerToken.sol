@@ -4,6 +4,7 @@ import "./../Utils/Math.sol";
 import "./TotalSupply.sol";
 import "./Burnable.sol";
 import "./Balance.sol";
+import "./TokenRecipient.sol";
 
 /// ERC20 compliant token contract
 contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
@@ -115,6 +116,16 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         public constant returns (uint)
     {
         return allowances[fromAccount][destination];
+    }
+
+    function approveAndCall(address _spender, uint256 _value, bytes _extraData)
+        public
+        returns (bool success) {
+        TokenRecipient spender = TokenRecipient(_spender);
+        if (approve(_spender, _value)) {
+            spender.receiveApproval(msg.sender, _value, this, _extraData);
+            return true;
+        }
     }
 
     function enablePublicTransfers() public grantOwner {
