@@ -2,6 +2,7 @@ const contract = require("truffle-contract");
 const crowdsaleMeta = require("../build/contracts/CryptoPoliceCrowdsale.json");
 const tokenMeta = require("../build/contracts/CryptoPoliceOfficerToken.json");
 const startCrowdsaleHelper = require('./../helpers/startCrowdsale');
+const fs = require('fs');
 
 const requiredOptions = [
     "from",         // Owner's address
@@ -160,6 +161,21 @@ const commands = {
     Ban: function (callback, artifacts, params) {
         return artifacts.crowdsale.then(function(crowdsale) {
             return crowdsale.ban(params[0], params[1])
+        })
+    },
+    WriteEventLog: function (callback, artifacts, params) {
+        return artifacts.crowdsale.then(function(crowdsale) {
+            var options = JSON.parse(params[0]);
+            crowdsale.allEvents(options.filter).get((error, logs) => {
+                if (error) {
+                    throw error
+                }
+                fs.writeFile(options.filePath, JSON.stringify(logs), (error) => {
+                    if (error) {
+                        throw error
+                    }
+                }); 
+            });
         })
     }
 };
