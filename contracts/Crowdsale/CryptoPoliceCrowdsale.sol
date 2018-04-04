@@ -293,10 +293,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         }
     }
 
-    function unidentifyParticipant(address participant, bool _moneyback) public grantOwnerOrAdmin notEnded {
-        if (_moneyback) {
-            moneyBack(participant);
-        }
+    function unidentifyParticipant(address participant) public grantOwnerOrAdmin notEnded {
         participants[participant].identified = false;
     }
 
@@ -350,10 +347,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         });
     }
 
-    function ban(address participant, bool _moneyback) public grantOwnerOrAdmin {
-        if (_moneyback) {
-            moneyBack(participant);
-        }
+    function ban(address participant) public grantOwnerOrAdmin {
         bannedParticipants[participant] = true;
     }
 
@@ -403,17 +397,6 @@ contract CryptoPoliceCrowdsale is Ownable {
         }
 
         assert(false);
-    }
-
-    /**
-     * Issue a refund and return tokens sold to the participant back to the crowdsale contract
-     */
-    function moneyBack(address participant) public notEnded grantOwnerOrAdmin {
-        uint refundedTokenCount = token.returnTokens(participant);
-        tokensSold = tokensSold.sub(refundedTokenCount);
-
-        returnDirectPayments(participant, true, true);
-        returnExternalPayments(participant, true, true);
     }
 
     function updateRevertSuspendedPayment(bool value) public grantOwnerOrAdmin {

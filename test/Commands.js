@@ -135,22 +135,6 @@ contract("All", function (accounts) {
             })
         });
     });
-    it("Money back", function () {
-        const amount = new BigNumber("10e+18");
-        return CryptoPoliceCrowdsale.deployed().then(function (crowdsale) {
-            return crowdsale.sendTransaction({
-                from: accounts[3],
-                value: amount
-            }).then(function () {
-                const balanceBefore = web3.eth.getBalance(accounts[3]);
-                return runCommand("MoneyBack", [accounts[3]]).then(function () {
-                    const balanceAfter = web3.eth.getBalance(accounts[3]);
-                    const expected = balanceBefore.add(amount);
-                    Assert.equal(balanceAfter.toString(), expected.toString());
-                })
-            })
-        })
-    });
     it("End crowdsale", function () {
         return runCommand("EndCrowdsale", [true]).then(function () {
             return CryptoPoliceCrowdsale.deployed().then(function (crowdsale) {

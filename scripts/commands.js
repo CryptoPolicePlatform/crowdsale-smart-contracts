@@ -133,11 +133,6 @@ const commands = {
             return crowdsale.updateExchangeRate(params[0], params[1], params[2])
         })
     },
-    MoneyBack: function (callback, artifacts, params) {
-        return artifacts.crowdsale.then(function(crowdsale) {
-            return crowdsale.moneyBack(params[0])
-        })
-    },
     EnablePublicTransfers: function (callback, artifacts) {
         return artifacts.token.then(function(token) {
             return token.enablePublicTransfers()

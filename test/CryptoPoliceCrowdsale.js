@@ -438,31 +438,6 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
 });
 contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
-    it("Owner issues money back", function() {
-        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.updateExchangeRate(0, 1, minSale).then(function() {
-                return crowdsale.sendTransaction({
-                    from: accounts[1],
-                    value: minSale
-                }).then(function() {
-                    return CryptoPoliceOfficerToken.deployed().then(function(token) {
-                        const ethBalanceBefore = web3.eth.getBalance(accounts[1]);
-                        return crowdsale.moneyBack(accounts[1]).then(function() {
-                            return token.balanceOf.call(crowdsale.address).then(function(tokenBalanceAfter) {
-                                Assert.equal(tokenBalanceAfter.toString(), hardCap.toString(), "Token balance mismatch");
-                                const ethBalanceAfter = web3.eth.getBalance(accounts[1]);
-                                const ethBalanceExpected = ethBalanceBefore.add(minSale);
-                                Assert.equal(ethBalanceAfter.toString(), ethBalanceExpected.toString(), "Ethereum balance mismatch");
-                            })
-                        })
-                    })
-                })
-            })
-        })
-    })
-});
-contract('CryptoPoliceCrowdsale', function(accounts) {
-    before(startCrowdsale);
     it("Balance not changed when proxy exchange has reminder", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
             return crowdsale.updateExchangeRate(0, 1, minSale).then(function() {

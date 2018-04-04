@@ -135,24 +135,6 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         releaseStartTime = now;
     }
 
-    function returnTokens(address _address) public returns (uint) {
-        require(isCrowdsale());
-        require(publicTransfersEnabled == false);
-
-        uint balance = balanceOf(_address);
-        
-        if (balance == 0) {
-            return 0;
-        }
-
-        balances[_address] = 0;
-        balances[crowdsaleContract] = balances[crowdsaleContract].add(balance);
-
-        Transfer(_address, crowdsaleContract, balance);
-        
-        return balance;
-    }
-
     function addTokenLock(uint amount, uint timespan) public grantOwner {
         require(releaseStartTime == 0);
         requireOwnerUnlockedAmount(amount);
