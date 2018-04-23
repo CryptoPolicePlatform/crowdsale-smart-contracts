@@ -1,4 +1,4 @@
-pragma solidity ^0.4.20;
+pragma solidity ^0.4.23;
 
 import "./../Utils/Math.sol";
 import "./TotalSupply.sol";
@@ -40,7 +40,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         uint amount
     );
     
-    function CryptoPoliceOfficerToken(
+    constructor(
         string tokenName,
         string tokenSymbol
     )
@@ -60,7 +60,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         if (amount > 0) {
             balances[msg.sender] -= amount;
             balances[destination] = balances[destination].add(amount);
-            Transfer(msg.sender, destination, amount);
+            emit Transfer(msg.sender, destination, amount);
             return true;
         }
         
@@ -72,7 +72,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         address destination,
         uint amount
     )
-        public hasSufficientBalance(source, amount) whenTransferable(0) hasUnlockedAmount(source, amount)
+        public hasSufficientBalance(source, amount) whenTransferable(destination) hasUnlockedAmount(source, amount)
         returns (bool)
     {
         require(allowances[source][msg.sender] >= amount);
@@ -81,7 +81,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
             balances[source] -= amount;
             allowances[source][msg.sender] -= amount;
             balances[destination] = balances[destination].add(amount);
-            Transfer(source, destination, amount);
+            emit Transfer(source, destination, amount);
             
             return true;
         }
@@ -104,7 +104,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         public returns (bool)
     {
         allowances[msg.sender][destination] = amount;
-        Approval(msg.sender, destination, amount);
+        emit Approval(msg.sender, destination, amount);
         
         return true;
     }
@@ -174,7 +174,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
     }
 
     modifier whenTransferable(address destination) {
-        require(publicTransfersEnabled || isCrowdsale() || (isOwner() && addressIsCrowdsale(destination) && balanceOf(crowdsaleContract) == 0));
+        require(publicTransfersEnabled || isCrowdsale() || (isOwner() && addressIsCrowdsale(destination) && balanceOf(crowdsaleContract) == 0) || (isOwner() && !crowdsaleSet()));
         _;
     }
 }

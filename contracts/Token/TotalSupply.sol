@@ -1,4 +1,4 @@
-pragma solidity ^0.4.20;
+pragma solidity ^0.4.23;
 
 contract TotalSupply {
     uint public totalSupply = 1000000000 * 10**18;

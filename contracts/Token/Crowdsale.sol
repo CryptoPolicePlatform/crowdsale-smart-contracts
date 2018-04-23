@@ -1,4 +1,4 @@
-pragma solidity ^0.4.20;
+pragma solidity ^0.4.23;
 
 import "./../Utils/Ownable.sol";
 import "./CrowdsaleState.sol";
@@ -8,8 +8,7 @@ contract Crowdsale is Ownable {
     address public crowdsaleContract;
 
     function isCrowdsale() internal view returns(bool) {
-        require(crowdsaleSet());
-        return msg.sender == crowdsaleContract;
+        return crowdsaleSet() && msg.sender == crowdsaleContract;
     }
 
     function crowdsaleSet() internal view returns(bool) {

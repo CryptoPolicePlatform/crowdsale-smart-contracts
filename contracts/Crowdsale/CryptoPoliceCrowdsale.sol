@@ -1,4 +1,4 @@
-pragma solidity ^0.4.20;
+pragma solidity ^0.4.23;
 
 import "./CrowdsaleToken.sol";
 import "../Utils/Math.sol";
@@ -190,7 +190,7 @@ contract CryptoPoliceCrowdsale is Ownable {
                     participants[participant].suspendedExternalWeiAmount = participants[participant].suspendedExternalWeiAmount.add(payment);
                 }
 
-                PaymentSuspended(participant);
+                emit PaymentSuspended(participant);
 
                 return;
             }
@@ -201,7 +201,7 @@ contract CryptoPoliceCrowdsale is Ownable {
             if (directPayment) {
                 participant.transfer(paymentReminder);
             } else {
-                ExternalPaymentReminder(paymentReminder, externalPaymentChecksum);
+                emit ExternalPaymentReminder(paymentReminder, externalPaymentChecksum);
             }
         }
 
@@ -268,8 +268,10 @@ contract CryptoPoliceCrowdsale is Ownable {
         state = CrowdsaleState.Ended;
         crowdsaleEndedSuccessfully = success;
 
-        if (success && this.balance > 0) {
-            uint amount = this.balance.sub(suspendedPayments);
+        uint balance = address(this).balance;
+
+        if (success && balance > 0) {
+            uint amount = balance.sub(suspendedPayments);
             owner.transfer(amount);
         }
     }

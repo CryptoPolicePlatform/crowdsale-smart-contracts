@@ -1,4 +1,4 @@
-pragma solidity ^0.4.20;
+pragma solidity ^0.4.23;
 
 library MathUtils {
     function add(uint a, uint b) internal pure returns (uint) {
