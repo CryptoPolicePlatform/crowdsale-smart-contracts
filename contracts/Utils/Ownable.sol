@@ -3,7 +3,7 @@ pragma solidity ^0.4.23;
 contract Ownable {
     address public owner;
 
-    function Ownable() public {
+    constructor() public {
         owner = msg.sender;
     }
 

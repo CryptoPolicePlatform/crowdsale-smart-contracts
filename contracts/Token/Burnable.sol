@@ -14,7 +14,7 @@ contract Burnable is TotalSupply, Balance, Ownable, Crowdsale {
     function burn(uint amount) public grantBurner hasSufficientBalance(msg.sender, amount) {
         balances[msg.sender] = balances[msg.sender].sub(amount);
         totalSupply = totalSupply.sub(amount);
-        Burn(msg.sender, amount);
+        emit Burn(msg.sender, amount);
     }
 
     modifier grantBurner {

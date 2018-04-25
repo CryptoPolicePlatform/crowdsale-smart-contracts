@@ -408,7 +408,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     /**
      * Transfer Wei sent to the contract directly back to the participant
      *
-     * @param participant 
+     * @param participant Participant
      * @param processed Whether or not processed payments should be included
      * @param suspended Whether or not suspended payments should be included
      */
@@ -427,7 +427,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     /**
      * Signal that externally made payments should be returned back to the participant
      *
-     * @param participant 
+     * @param participant Participant
      * @param processed Whether or not processed payments should be included
      * @param suspended Whether or not suspended payments should be included
      */

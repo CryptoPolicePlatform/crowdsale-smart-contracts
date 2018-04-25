@@ -51,20 +51,31 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         balances[msg.sender] = totalSupply;
     }
     
-    function transfer(address destination, uint amount)
-    public hasSufficientBalance(msg.sender, amount) whenTransferable(destination) hasUnlockedAmount(msg.sender, amount)
-    returns (bool)
+    function _transfer(
+        address source,
+        address destination,
+        uint amount
+    )
+        internal
+        hasSufficientBalance(source, amount)
+        whenTransferable(destination)
+        hasUnlockedAmount(source, amount)
     {
-        require(destination != address(this));
+        require(destination != address(this) && destination != 0x0);
 
         if (amount > 0) {
-            balances[msg.sender] -= amount;
+            balances[source] -= amount;
             balances[destination] = balances[destination].add(amount);
-            emit Transfer(msg.sender, destination, amount);
-            return true;
         }
-        
-        return false;
+
+        emit Transfer(source, destination, amount);
+    }
+
+    function transfer(address destination, uint amount)
+    public returns (bool)
+    {
+        _transfer(msg.sender, destination, amount);
+        return true;
     }
 
     function transferFrom(
@@ -72,21 +83,15 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         address destination,
         uint amount
     )
-        public hasSufficientBalance(source, amount) whenTransferable(destination) hasUnlockedAmount(source, amount)
-        returns (bool)
+        public returns (bool)
     {
         require(allowances[source][msg.sender] >= amount);
+
+        allowances[source][msg.sender] -= amount;
+
+        _transfer(source, destination, amount);
         
-        if (amount > 0) {
-            balances[source] -= amount;
-            allowances[source][msg.sender] -= amount;
-            balances[destination] = balances[destination].add(amount);
-            emit Transfer(source, destination, amount);
-            
-            return true;
-        }
-        
-        return false;
+        return true;
     }
     
     /**
@@ -118,24 +123,36 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         return allowances[fromAccount][destination];
     }
 
-    function approveAndCall(address _spender, uint256 _value, bytes _extraData)
+    function approveAndCall(
+        address _spender,
+        uint256 _value,
+        bytes _extraData
+    )
         public
-        returns (bool success) {
+        returns (bool)
+    {
         TokenRecipient spender = TokenRecipient(_spender);
+
         if (approve(_spender, _value)) {
             spender.receiveApproval(msg.sender, _value, this, _extraData);
             return true;
         }
+
+        return false;
     }
 
-    function enablePublicTransfers() public grantOwner {
+    function enablePublicTransfers()
+    public grantOwner
+    {
         require(crowdsaleSuccessful());
         
         publicTransfersEnabled = true;
         releaseStartTime = now;
     }
 
-    function addTokenLock(uint amount, uint timespan) public grantOwner {
+    function addTokenLock(uint amount, uint timespan)
+    public grantOwner
+    {
         require(releaseStartTime == 0);
         requireOwnerUnlockedAmount(amount);
 
@@ -148,7 +165,9 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         lockedAmount += amount;
     }
 
-    function releaseLockedTokens(uint8 idx) public grantOwner {
+    function releaseLockedTokens(uint8 idx)
+    public grantOwner
+    {
         require(releaseStartTime > 0);
         require(!locks[idx].released);
         require((releaseStartTime + locks[idx].timespan) < now);
@@ -157,11 +176,15 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         lockedAmount -= locks[idx].amount;
     }
 
-    function requireOwnerUnlockedAmount(uint amount) internal view {
+    function requireOwnerUnlockedAmount(uint amount)
+    internal view
+    {
         require(balanceOf(owner).sub(lockedAmount) >= amount);
     }
 
-    function setCrowdsaleContract(address crowdsale) public grantOwner {
+    function setCrowdsaleContract(address crowdsale)
+    public grantOwner
+    {
         super.setCrowdsaleContract(crowdsale);
         transfer(crowdsale, getCrowdsaleHardCap());
     }
@@ -174,7 +197,11 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
     }
 
     modifier whenTransferable(address destination) {
-        require(publicTransfersEnabled || isCrowdsale() || (isOwner() && addressIsCrowdsale(destination) && balanceOf(crowdsaleContract) == 0) || (isOwner() && !crowdsaleSet()));
+        require(publicTransfersEnabled
+            || isCrowdsale()
+            || (isOwner() && addressIsCrowdsale(destination) && balanceOf(crowdsaleContract) == 0)
+            || (isOwner() && !crowdsaleSet())
+        );
         _;
     }
 }
