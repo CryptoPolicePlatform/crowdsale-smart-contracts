@@ -34,10 +34,10 @@ contract CryptoPoliceCrowdsale is Ownable {
     event ExternalPaymentReminder(uint weiAmount, bytes32 paymentChecksum);
     event PaymentSuspended(address participant);
 
-    uint public constant MIN_CAP = 12500000 * 10**18;
-    uint public constant SOFT_CAP = 51000000 * 10**18;
-    uint public constant POWER_CAP = 204000000 * 10**18;
-    uint public constant HARD_CAP = 510000000 * 10**18;
+    uint public constant VOLUME1 = 270000000e18;
+    uint public constant VOLUME2 = 80000000e18;
+    uint public constant VOLUME3 = 140000000e18;
+    uint public constant VOLUME4 = 20000000e18;
 
     address public admin;
 
@@ -67,7 +67,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     CrowdsaleState public state = CrowdsaleState.Pending;
 
     /**
-     * List of exchange rates for each goal (cap)
+     * List of exchange rates for each token volume
      */
     ExchangeRate[4] public exchangeRates;
     
@@ -135,7 +135,7 @@ contract CryptoPoliceCrowdsale is Ownable {
 
         // this indicates that leftover tokens at current goal are less than we can exchange
         if (availablePortions == 0) {
-            if (currentGoal == HARD_CAP) {
+            if (currentGoal == VOLUME4) {
                 return (_paymentReminder, _processedTokenCount, true);
             }
             // move sale position to current goal
@@ -368,33 +368,33 @@ contract CryptoPoliceCrowdsale is Ownable {
     }
 
     function goal(uint salePosition) internal pure returns (uint) {
-        if (salePosition < MIN_CAP) {
-            return MIN_CAP;
+        if (salePosition < VOLUME1) {
+            return VOLUME1;
         }
-        if (salePosition < SOFT_CAP) {
-            return SOFT_CAP;
+        if (salePosition < VOLUME2) {
+            return VOLUME2;
         }
-        if (salePosition < POWER_CAP) {
-            return POWER_CAP;
+        if (salePosition < VOLUME3) {
+            return VOLUME3;
         }
-        if (salePosition < HARD_CAP) {
-            return HARD_CAP;
+        if (salePosition < VOLUME4) {
+            return VOLUME4;
         }
 
         assert(false);
     }
 
     function exchangeRateIdx(uint _goal) internal pure returns (uint8) {
-        if (_goal == MIN_CAP) {
+        if (_goal == VOLUME1) {
             return 0;
         }
-        if (_goal == SOFT_CAP) {
+        if (_goal == VOLUME2) {
             return 1;
         }
-        if (_goal == POWER_CAP) {
+        if (_goal == VOLUME3) {
             return 2;
         }
-        if (_goal == HARD_CAP) {
+        if (_goal == VOLUME4) {
             return 3;
         }
 
@@ -452,10 +452,6 @@ contract CryptoPoliceCrowdsale is Ownable {
 
     function isAdmin() internal view returns(bool) {
         return isAdminSet() && msg.sender == admin;
-    }
-
-    function getHardCap() public pure returns(uint) {
-        return HARD_CAP;
     }
 
     function isCrowdsaleSuccessful() public view returns(bool) {
