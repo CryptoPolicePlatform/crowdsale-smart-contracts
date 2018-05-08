@@ -197,11 +197,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
     }
 
     modifier whenTransferable(address destination) {
-        require(publicTransfersEnabled
-            || isCrowdsale()
-            || (isOwner() && addressIsCrowdsale(destination) && balanceOf(crowdsaleContract) == 0)
-            || (isOwner() && !crowdsaleSet())
-        );
+        require(publicTransfersEnabled || isCrowdsale() || (isOwner() && addressIsCrowdsale(destination) && balanceOf(crowdsaleContract) == 0) || (isOwner() && !crowdsaleSet()));
         _;
     }
 }
