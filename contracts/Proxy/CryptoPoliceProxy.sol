@@ -40,7 +40,11 @@ contract CryptoPoliceProxy is Ownable
 
     function balanceOf(address account) grantCrowdsale public view returns (uint)
     {
-        return CrowdsaleToken(token).balanceOf(account);
+        if (account == crowdsale) {
+            return CrowdsaleToken(token).balanceOf(address(this));
+        } else {
+            return CrowdsaleToken(token).balanceOf(account);
+        }
     }
 
     function burn(uint amount) grantCrowdsale public
@@ -56,7 +60,7 @@ contract CryptoPoliceProxy is Ownable
 
     function getHardCap() public pure returns(uint)
     {
-        return 510000000;
+        return 510000000e18;
     }
 
     function isCrowdsaleSuccessful() public view returns(bool)

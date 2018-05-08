@@ -247,7 +247,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         require(state == CrowdsaleState.Pending);
         setAdmin(adminAddress);
         token = CrowdsaleToken(crowdsaleToken);
-        require(token.balanceOf(address(this)) == HARD_CAP);
+        require(token.balanceOf(address(this)) == 510000000e18);
         state = CrowdsaleState.Started;
     }
 

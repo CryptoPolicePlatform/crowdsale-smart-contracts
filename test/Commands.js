@@ -1,6 +1,7 @@
 const gas = 800000;
 const Assert = require('assert');
 require('./../helpers/constants');
+const CryptoPoliceProxy = artifacts.require("CryptoPoliceProxy");
 const startCrowdsaleHelper = require('./../helpers/startCrowdsale');
 const CryptoPoliceCrowdsale = artifacts.require("CryptoPoliceCrowdsale");
 const CryptoPoliceOfficerToken = artifacts.require("CryptoPoliceOfficerToken");
@@ -176,7 +177,7 @@ contract("All", function (accounts) {
 });
 contract("All", function (accounts) {
     it("Refund", function () {
-        return startCrowdsaleHelper(CryptoPoliceOfficerToken.deployed(), CryptoPoliceCrowdsale.deployed(), accounts[0]).then(function () {
+        return startCrowdsaleHelper(CryptoPoliceOfficerToken.deployed(), CryptoPoliceCrowdsale.deployed(), accounts[0], CryptoPoliceProxy.deployed()).then(function () {
             return CryptoPoliceCrowdsale.deployed().then(function (crowdsale) {
                 return crowdsale.updateExchangeRate(0, 1, minSale).then(function () {
                     return crowdsale.sendTransaction({

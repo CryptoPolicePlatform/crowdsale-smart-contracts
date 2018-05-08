@@ -1,4 +1,5 @@
 const startCrowdsaleHelper = require('./../helpers/startCrowdsale');
+const CryptoPoliceProxy = artifacts.require("CryptoPoliceProxy");
 const CryptoPoliceCrowdsale = artifacts.require("CryptoPoliceCrowdsale");
 const CryptoPoliceOfficerToken = artifacts.require("CryptoPoliceOfficerToken");
 const Assert = require('assert');
@@ -13,7 +14,7 @@ const startCrowdsale = function () {
     return CryptoPoliceOfficerToken.deployed().then(function (token) {
         return token.owner.call().then(function (owner) {
             return startCrowdsaleHelper(CryptoPoliceOfficerToken.deployed(),
-                CryptoPoliceCrowdsale.deployed(), owner);
+                CryptoPoliceCrowdsale.deployed(), owner, CryptoPoliceProxy.deployed());
         })
     })
 };
