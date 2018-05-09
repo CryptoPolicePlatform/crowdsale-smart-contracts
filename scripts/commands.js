@@ -1,6 +1,7 @@
 const contract = require("truffle-contract");
 const crowdsaleMeta = require("../build/contracts/CryptoPoliceCrowdsale.json");
 const tokenMeta = require("../build/contracts/CryptoPoliceOfficerToken.json");
+const proxyMeta = require("../build/contracts/CryptoPoliceProxy.json");
 const startCrowdsaleHelper = require('./../helpers/startCrowdsale');
 const fs = require('fs');
 
@@ -8,7 +9,8 @@ const requiredOptions = [
     "from",         // Owner's address
     "token",        // Address of token contract
     "crowdsale",    // Address of crowdsale contract
-    "gas"
+    "gas",
+    "proxy"
 ];
 
 module.exports = function(callback) {
@@ -62,12 +64,15 @@ function getArgs() {
 function initArtifacts(args) {
     const CryptoPoliceCrowdsale = contract(crowdsaleMeta);
     const CryptoPoliceOfficerToken = contract(tokenMeta);
+    const CryptoPoliceProxy = contract(proxyMeta);
 
     CryptoPoliceCrowdsale.setProvider(web3.currentProvider);
     CryptoPoliceOfficerToken.setProvider(web3.currentProvider);
+    CryptoPoliceProxy.setProvider(web3.currentProvider);
 
     CryptoPoliceCrowdsale.defaults({ from: args.options.from, gas: args.options.gas });
     CryptoPoliceOfficerToken.defaults({ from: args.options.from, gas: args.options.gas });
+    CryptoPoliceProxy.defaults({ from: args.options.from, gas: args.options.gas });
 
     return {
         get crowdsale() {
@@ -75,13 +80,16 @@ function initArtifacts(args) {
         },
         get token() {
             return CryptoPoliceOfficerToken.at(args.options.token)
+        },
+        get proxy() {
+            return CryptoPoliceProxy.at(args.options.proxy)
         }
     }
 }
 
 const commands = {
     Start: function (callback, artifacts, params) {
-        return startCrowdsaleHelper(artifacts.token, artifacts.crowdsale, params[0])
+        return startCrowdsaleHelper(artifacts.token, artifacts.crowdsale, params[0], artifacts.proxy)
     },
     Pause: function (callback, artifacts) {
         return artifacts.crowdsale.then(function(crowdsale) {

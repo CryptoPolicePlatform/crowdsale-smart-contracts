@@ -12,21 +12,23 @@ const runCommand = function (cmdName, params) {
     return new Promise((resolve, reject) => {
         CryptoPoliceOfficerToken.deployed().then(function (token) {
             CryptoPoliceCrowdsale.deployed().then(function (crowdsale) {
-                crowdsale.owner.call().then(function (ownerAddress) {
-                    let cmdParams = "";
-                    if (params && params.length > 0) {
-                        cmdParams += " " + params.join(' ');
-                    }
-                    const cmd = `truffle exec scripts/commands.js command ${cmdName}${cmdParams} --token=${token.address} --crowdsale=${crowdsale.address} --from=${ownerAddress} --gas=${gas}`;
-                    exec(cmd, (error, stdout, stderr) => {
-                        if (error) {
-                            if (stdout) {
-                                error = new Error(error + stdout.toString())
-                            }
-                            reject(error);
-                        } else {
-                            resolve();
+                CryptoPoliceProxy.deployed().then(function (proxy) {
+                    crowdsale.owner.call().then(function (ownerAddress) {
+                        let cmdParams = "";
+                        if (params && params.length > 0) {
+                            cmdParams += " " + params.join(' ');
                         }
+                        const cmd = `truffle exec scripts/commands.js command ${cmdName}${cmdParams} --token=${token.address} --crowdsale=${crowdsale.address} --from=${ownerAddress} --gas=${gas} --proxy=${proxy.address}`;
+                        exec(cmd, (error, stdout, stderr) => {
+                            if (error) {
+                                if (stdout) {
+                                    error = new Error(error + stdout.toString())
+                                }
+                                reject(error);
+                            } else {
+                                resolve();
+                            }
+                        })
                     })
                 })
             })
