@@ -4,13 +4,6 @@ import "./CrowdsaleToken.sol";
 import "../Utils/Math.sol";
 import "../Utils/Ownable.sol";
 
-// TODO: Money back and refund conditions
-// TODO: Test fluctuating undefined payment limit
-// TODO: Test refund of suspended amount
-// TODO: External refund tests
-// TODO: KYC event?
-// TODO: Gas price and limit?
-// TODO: Test against common security issues
 contract CryptoPoliceCrowdsale is Ownable {
     using MathUtils for uint;
     
@@ -34,10 +27,10 @@ contract CryptoPoliceCrowdsale is Ownable {
     event ExternalPaymentReminder(uint weiAmount, bytes32 paymentChecksum);
     event PaymentSuspended(address participant);
 
-    uint public constant VOLUME1 = 270000000e18;
-    uint public constant VOLUME2 = 80000000e18;
-    uint public constant VOLUME3 = 140000000e18;
-    uint public constant VOLUME4 = 20000000e18;
+    uint public constant TRESHOLD1 = 270000000e18;
+    uint public constant TRESHOLD2 = 350000000e18;
+    uint public constant TRESHOLD3 = 490000000e18;
+    uint public constant TRESHOLD4 = 510000000e18;
 
     address public admin;
 
@@ -127,19 +120,20 @@ contract CryptoPoliceCrowdsale is Ownable {
     function exchangeCalculator(uint salePosition, uint _paymentReminder, uint _processedTokenCount)
     internal view returns (uint paymentReminder, uint processedTokenCount, bool soldOut)
     {
-        uint currentGoal = goal(salePosition);
-        ExchangeRate memory currentExchangeRate = getExchangeRate(currentGoal);
+        uint treshold = getTreshold(salePosition);
+        ExchangeRate memory currentExchangeRate = getExchangeRate(treshold);
 
-        // how many round number of portions are left for exchange at current goal
-        uint availablePortions = (currentGoal - salePosition) / currentExchangeRate.tokens;
+        // how many round number of portions are left for exchange
+        uint availablePortions = (treshold - salePosition) / currentExchangeRate.tokens;
 
-        // this indicates that leftover tokens at current goal are less than we can exchange
+        // this indicates that there are no leftover tokens that can be exchanged
+        // without stepping over treshold
         if (availablePortions == 0) {
-            if (currentGoal == VOLUME4) {
+            if (treshold == TRESHOLD4) {
                 return (_paymentReminder, _processedTokenCount, true);
             }
-            // move sale position to current goal
-            return exchangeCalculator(currentGoal, _paymentReminder, _processedTokenCount);
+            // move sale position to current treshold
+            return exchangeCalculator(treshold, _paymentReminder, _processedTokenCount);
         }
 
         uint requestedPortions = _paymentReminder / currentExchangeRate.price;
@@ -357,8 +351,8 @@ contract CryptoPoliceCrowdsale is Ownable {
         bannedParticipants[participant] = false;
     }
 
-    function getExchangeRate(uint _goal) internal view returns (ExchangeRate) {
-        uint8 idx = exchangeRateIdx(_goal);
+    function getExchangeRate(uint treshold) internal view returns (ExchangeRate) {
+        uint8 idx = exchangeRateIdx(treshold);
 
         ExchangeRate storage rate = exchangeRates[idx];
 
@@ -367,34 +361,34 @@ contract CryptoPoliceCrowdsale is Ownable {
         return rate;
     }
 
-    function goal(uint salePosition) internal pure returns (uint) {
-        if (salePosition < VOLUME1) {
-            return VOLUME1;
+    function getTreshold(uint salePosition) internal pure returns (uint) {
+        if (salePosition < TRESHOLD1) {
+            return TRESHOLD1;
         }
-        if (salePosition < VOLUME2) {
-            return VOLUME2;
+        if (salePosition < TRESHOLD2) {
+            return TRESHOLD2;
         }
-        if (salePosition < VOLUME3) {
-            return VOLUME3;
+        if (salePosition < TRESHOLD3) {
+            return TRESHOLD3;
         }
-        if (salePosition < VOLUME4) {
-            return VOLUME4;
+        if (salePosition < TRESHOLD4) {
+            return TRESHOLD4;
         }
 
         assert(false);
     }
 
-    function exchangeRateIdx(uint _goal) internal pure returns (uint8) {
-        if (_goal == VOLUME1) {
+    function exchangeRateIdx(uint treshold) internal pure returns (uint8) {
+        if (treshold == TRESHOLD1) {
             return 0;
         }
-        if (_goal == VOLUME2) {
+        if (treshold == TRESHOLD2) {
             return 1;
         }
-        if (_goal == VOLUME3) {
+        if (treshold == TRESHOLD3) {
             return 2;
         }
-        if (_goal == VOLUME4) {
+        if (treshold == TRESHOLD4) {
             return 3;
         }
 
