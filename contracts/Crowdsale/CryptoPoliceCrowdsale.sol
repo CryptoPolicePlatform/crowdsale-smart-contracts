@@ -88,6 +88,11 @@ contract CryptoPoliceCrowdsale is Ownable {
 
     mapping(address => bytes32[]) public participantSuspendedExternalPaymentChecksums;
 
+    /**
+     * Map external payment checksum to payment amount
+     */
+    mapping(bytes32 => uint) public suspendedExternalPayments;
+
     mapping(address => bool) public bannedParticipants;
 
     bool public revertSuspendedPayment = false;
@@ -182,6 +187,7 @@ contract CryptoPoliceCrowdsale is Ownable {
                 } else {
                     participantSuspendedExternalPaymentChecksums[participant].push(externalPaymentChecksum);
                     participants[participant].suspendedExternalWeiAmount = participants[participant].suspendedExternalWeiAmount.add(payment);
+                    suspendedExternalPayments[externalPaymentChecksum] = payment;
                 }
 
                 emit PaymentSuspended(participant);
@@ -280,9 +286,10 @@ contract CryptoPoliceCrowdsale is Ownable {
         }
 
         if (participants[participant].suspendedExternalWeiAmount > 0) {
-            bytes32[] storage payments = participantSuspendedExternalPaymentChecksums[participant];
-            for (uint i = 0; i < payments.length; i++) {
-                processPayment(participant, participants[participant].suspendedExternalWeiAmount, payments[i]);
+            bytes32[] storage checksums = participantSuspendedExternalPaymentChecksums[participant];
+            for (uint i = 0; i < checksums.length; i++) {
+                processPayment(participant, suspendedExternalPayments[checksums[i]], checksums[i]);
+                suspendedExternalPayments[checksums[i]] = 0;
             }
             participants[participant].suspendedExternalWeiAmount = 0;
             participantSuspendedExternalPaymentChecksums[participant] = new bytes32[](0);

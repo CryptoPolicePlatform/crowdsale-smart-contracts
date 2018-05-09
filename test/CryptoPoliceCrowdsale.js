@@ -489,3 +489,27 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         
     })
 });
+contract('CryptoPoliceCrowdsale', function(accounts) {
+    before(startCrowdsale);
+    it("Multiple suspended external payments are processed when participant identified", function() {
+        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+            return crowdsale.updateExchangeRate(0, 1, 1).then(function() {
+                return crowdsale.updateUnidentifiedSaleLimit(1).then(function() {
+                    return crowdsale.updateMinSale(1).then(function () {
+                        return crowdsale.proxyExchange(accounts[1], 2, "reference", "checksum").then(function() {
+                            return crowdsale.proxyExchange(accounts[1], 2, "reference1", "checksum1").then(function() {
+                                return crowdsale.markParticipantIdentifiend(accounts[1]).then(function() {
+                                    return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                                        return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
+                                            Assert.equal(tokenCount.toString(), "4");
+                                        })
+                                    })
+                                })
+                            })
+                        })
+                    })
+                })
+            })
+        })
+    });
+});
