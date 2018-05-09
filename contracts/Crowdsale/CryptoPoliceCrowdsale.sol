@@ -27,10 +27,10 @@ contract CryptoPoliceCrowdsale is Ownable {
     event ExternalPaymentReminder(uint weiAmount, bytes32 paymentChecksum);
     event PaymentSuspended(address participant);
 
-    uint public constant TRESHOLD1 = 270000000e18;
-    uint public constant TRESHOLD2 = 350000000e18;
-    uint public constant TRESHOLD3 = 490000000e18;
-    uint public constant TRESHOLD4 = 510000000e18;
+    uint public constant THRESHOLD1 = 270000000e18;
+    uint public constant THRESHOLD2 = 350000000e18;
+    uint public constant THRESHOLD3 = 490000000e18;
+    uint public constant THRESHOLD4 = 510000000e18;
 
     address public admin;
 
@@ -120,20 +120,20 @@ contract CryptoPoliceCrowdsale is Ownable {
     function exchangeCalculator(uint salePosition, uint _paymentReminder, uint _processedTokenCount)
     internal view returns (uint paymentReminder, uint processedTokenCount, bool soldOut)
     {
-        uint treshold = getTreshold(salePosition);
-        ExchangeRate memory currentExchangeRate = getExchangeRate(treshold);
+        uint threshold = getTreshold(salePosition);
+        ExchangeRate memory currentExchangeRate = getExchangeRate(threshold);
 
         // how many round number of portions are left for exchange
-        uint availablePortions = (treshold - salePosition) / currentExchangeRate.tokens;
+        uint availablePortions = (threshold - salePosition) / currentExchangeRate.tokens;
 
         // this indicates that there are no leftover tokens that can be exchanged
-        // without stepping over treshold
+        // without stepping over threshold
         if (availablePortions == 0) {
-            if (treshold == TRESHOLD4) {
+            if (threshold == THRESHOLD4) {
                 return (_paymentReminder, _processedTokenCount, true);
             }
-            // move sale position to current treshold
-            return exchangeCalculator(treshold, _paymentReminder, _processedTokenCount);
+            // move sale position to current threshold
+            return exchangeCalculator(threshold, _paymentReminder, _processedTokenCount);
         }
 
         uint requestedPortions = _paymentReminder / currentExchangeRate.price;
@@ -351,8 +351,8 @@ contract CryptoPoliceCrowdsale is Ownable {
         bannedParticipants[participant] = false;
     }
 
-    function getExchangeRate(uint treshold) internal view returns (ExchangeRate) {
-        uint8 idx = exchangeRateIdx(treshold);
+    function getExchangeRate(uint threshold) internal view returns (ExchangeRate) {
+        uint8 idx = exchangeRateIdx(threshold);
 
         ExchangeRate storage rate = exchangeRates[idx];
 
@@ -362,33 +362,33 @@ contract CryptoPoliceCrowdsale is Ownable {
     }
 
     function getTreshold(uint salePosition) internal pure returns (uint) {
-        if (salePosition < TRESHOLD1) {
-            return TRESHOLD1;
+        if (salePosition < THRESHOLD1) {
+            return THRESHOLD1;
         }
-        if (salePosition < TRESHOLD2) {
-            return TRESHOLD2;
+        if (salePosition < THRESHOLD2) {
+            return THRESHOLD2;
         }
-        if (salePosition < TRESHOLD3) {
-            return TRESHOLD3;
+        if (salePosition < THRESHOLD3) {
+            return THRESHOLD3;
         }
-        if (salePosition < TRESHOLD4) {
-            return TRESHOLD4;
+        if (salePosition < THRESHOLD4) {
+            return THRESHOLD4;
         }
 
         assert(false);
     }
 
-    function exchangeRateIdx(uint treshold) internal pure returns (uint8) {
-        if (treshold == TRESHOLD1) {
+    function exchangeRateIdx(uint threshold) internal pure returns (uint8) {
+        if (threshold == THRESHOLD1) {
             return 0;
         }
-        if (treshold == TRESHOLD2) {
+        if (threshold == THRESHOLD2) {
             return 1;
         }
-        if (treshold == TRESHOLD3) {
+        if (threshold == THRESHOLD3) {
             return 2;
         }
-        if (treshold == TRESHOLD4) {
+        if (threshold == THRESHOLD4) {
             return 3;
         }
 
