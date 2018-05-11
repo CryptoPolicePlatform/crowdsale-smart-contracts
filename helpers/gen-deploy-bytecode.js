@@ -2,7 +2,7 @@ module.exports = function (web3, callback, settings) {
     const meta = require("../build/contracts/" + settings.contractName + ".json");
     const contract = web3.eth.contract(meta.abi);
     const fs = require('fs');
-    const args = settings.args.concat([{
+    const args = (settings.args ? settings.args : []).concat([{
         data: meta.bytecode
     }]);
     const data = contract.new.getData.apply(null, args);

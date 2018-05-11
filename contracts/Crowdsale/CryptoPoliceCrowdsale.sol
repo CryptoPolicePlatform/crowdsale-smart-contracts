@@ -108,7 +108,7 @@ contract CryptoPoliceCrowdsale is Ownable {
             msg.sender.transfer(msg.value);
             refundParticipant(msg.sender);
         } else {
-            require(state == CrowdsaleState.Started);
+            require(state == CrowdsaleState.Started, "Crowdsale currently inactive");
             processPayment(msg.sender, msg.value, "");
         }
     }
@@ -157,8 +157,8 @@ contract CryptoPoliceCrowdsale is Ownable {
     }
 
     function processPayment(address participant, uint payment, bytes32 externalPaymentChecksum) internal {
-        require(payment >= minSale);
-        require(bannedParticipants[participant] == false);
+        require(payment >= minSale, "Payment must be greather or equal to sale minimum");
+        require(bannedParticipants[participant] == false, "Participant is banned");
 
         uint paymentReminder;
         uint processedTokenCount;
@@ -180,7 +180,7 @@ contract CryptoPoliceCrowdsale is Ownable {
             // due to fluctuations of unidentified payment limit, it might not be reached
             // suspend current payment if participant currently has suspended payments or limit reached
             if (hasSuspendedPayments || spendings > unidentifiedSaleLimit) {
-                require(revertSuspendedPayment == false);
+                require(revertSuspendedPayment == false, "Participant does not comply with KYC");
 
                 suspendedPayments = suspendedPayments + payment;
 
@@ -213,7 +213,7 @@ contract CryptoPoliceCrowdsale is Ownable {
             participants[participant].processedExternalWeiAmount = participants[participant].processedExternalWeiAmount.add(spent);
         }
 
-        require(token.transfer(participant, processedTokenCount));
+        require(token.transfer(participant, processedTokenCount), "Failed to transfer tokens");
         
         if (soldOut) {
             state = CrowdsaleState.SoldOut;
@@ -223,18 +223,17 @@ contract CryptoPoliceCrowdsale is Ownable {
     }
 
     /**
-     * TODO: State limit to started
      * Intended when other currencies are received and owner has to carry out exchange
      * for those payments aligned to Wei
      */
     function proxyExchange(address beneficiary, uint payment, string description, bytes32 checksum)
     public grantOwnerOrAdmin
     {
-        require(beneficiary != address(0));
-        require(bytes(description).length > 0);
-        require(checksum.length > 0);
+        require(beneficiary != address(0), "Beneficiary not specified");
+        require(bytes(description).length > 0, "Description not specified");
+        require(checksum.length > 0, "Checksum not specified");
         // make sure that payment has not been processed yet
-        require(bytes(externalPaymentDescriptions[checksum]).length == 0);
+        require(bytes(externalPaymentDescriptions[checksum]).length == 0, "Payment already processed");
 
         processPayment(beneficiary, payment, checksum);
         
@@ -365,7 +364,7 @@ contract CryptoPoliceCrowdsale is Ownable {
 
         ExchangeRate storage rate = exchangeRates[idx];
 
-        require(rate.tokens > 0 && rate.price > 0);
+        require(rate.tokens > 0 && rate.price > 0, "Exchange rate not set");
 
         return rate;
     }
@@ -475,7 +474,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     }
 
     modifier notEnded {
-        require(state != CrowdsaleState.Ended);
+        require(state != CrowdsaleState.Ended, "Crowdsale ended");
         _;
     }
 
