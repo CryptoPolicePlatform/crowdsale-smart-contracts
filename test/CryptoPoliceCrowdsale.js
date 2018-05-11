@@ -513,3 +513,27 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         })
     });
 });
+contract('CryptoPoliceCrowdsale', function(accounts) {
+    before(startCrowdsale);
+    it("Admin transfers Ethereum after release treshold is reached", function() {
+        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+            return crowdsale.updateExchangeRate(0, releaseThreshold, minSale).then(function() {
+                return crowdsale.updateUnidentifiedSaleLimit(minSale.add(1)).then(function() {
+                    return crowdsale.sendTransaction({
+                        from: accounts[1],
+                        value: minSale
+                    }).then(function(tx) {
+                        const balanceBefore = web3.eth.getBalance(accounts[0]);
+                        return crowdsale.transwerFunds(minSale, {
+                            gasPrice: gasPrice
+                        }).then(function (tx) {
+                            const balanceAfter = web3.eth.getBalance(accounts[0]);
+                            const calculatedBalanceAfter = balanceBefore.minus(gasPrice * tx.receipt.gasUsed).add(minSale);
+                            Assert.equal(balanceAfter.toString(), calculatedBalanceAfter.toString());
+                        });
+                    })
+                })
+            })
+        })
+    })
+});

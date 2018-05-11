@@ -6,3 +6,4 @@ global.hardCap = new BigNumber("510000000e+18");
 global.minSale = new BigNumber("1e+16");
 global.gasPrice = 10000000000;
 global.unidentifiedSaleLimit = new BigNumber("1e+18");
+global.releaseThreshold = new BigNumber("27000500e+18");

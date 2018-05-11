@@ -32,6 +32,8 @@ contract CryptoPoliceCrowdsale is Ownable {
     uint public constant THRESHOLD3 = 490000000e18;
     uint public constant THRESHOLD4 = 510000000e18;
 
+    uint public constant RELEASE_THRESHOLD = 27000500e18;
+
     address public admin;
 
     /**
@@ -446,6 +448,19 @@ contract CryptoPoliceCrowdsale is Ownable {
         admin = adminAddress;
         require(isAdminSet());
     }
+
+    function transwerFunds(uint amount) public grantOwner {
+        require(RELEASE_THRESHOLD <= tokensSold, "There are not enaugh tokens sold");
+        
+        uint transferAmount = amount;
+        uint balance = address(this).balance;
+
+        if (balance < amount) {
+            transferAmount = balance;
+        }
+
+        owner.transfer(transferAmount);
+    } 
 
     function isAdminSet() internal view returns(bool) {
         return admin != address(0);
