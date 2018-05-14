@@ -26,13 +26,14 @@ contract CryptoPoliceCrowdsale is Ownable {
 
     event ExternalPaymentReminder(uint weiAmount, bytes32 paymentChecksum);
     event PaymentSuspended(address participant);
+    event PaymentProcessed(uint weiAmount, address participant, bytes32 paymentChecksum, uint tokenAmount);
 
     uint public constant THRESHOLD1 = 270000000e18;
     uint public constant THRESHOLD2 = 350000000e18;
     uint public constant THRESHOLD3 = 490000000e18;
     uint public constant THRESHOLD4 = 510000000e18;
 
-    uint public constant RELEASE_THRESHOLD = 27000500e18;
+    uint public constant RELEASE_THRESHOLD = 11111111e18;
 
     address public admin;
 
@@ -71,7 +72,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     /**
      * Number of Wei that can be paid without carrying out KYC process
      */
-    uint public unidentifiedSaleLimit = 1 ether;
+    uint public unidentifiedSaleLimit = 1.45 ether;
 
     /**
      * Crowdsale participants that have made payments
@@ -220,6 +221,8 @@ contract CryptoPoliceCrowdsale is Ownable {
         }
         
         tokensSold = tokensSold + processedTokenCount;
+
+        emit PaymentProcessed(spent, participant, externalPaymentChecksum, processedTokenCount);
     }
 
     /**
