@@ -1,3 +1,5 @@
+const Web3 = require('web3');
+
 module.exports = {
   networks: {
     // matches client started with "truffle develop" command
@@ -10,6 +12,11 @@ module.exports = {
       host: "localhost",
       port: 8545,
       network_id: 4
+    },
+    live: {
+      host: "localhost",
+      port: 8545,
+      network_id: 1
     }
   }
 };
