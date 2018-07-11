@@ -5,7 +5,13 @@ module.exports = function(callback) {
     Contract.defaults(payload.transactionObject);
     
     Contract.at(payload.transactionObject.to).then(contract => {
-        contract[payload.exec.method].apply(null, payload.exec.args)
+        const method = contract[payload.exec.method];
+
+        if (payload.readOnly) {
+            method = method.call;
+        }
+
+        method.apply(null, payload.exec.args)
         .then(result => {
             console.log(JSON.stringify(result));
             callback()
