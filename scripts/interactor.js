@@ -5,7 +5,7 @@ module.exports = function(callback) {
     Contract.defaults(payload.transactionObject);
     
     Contract.at(payload.transactionObject.to).then(contract => {
-        const method = contract[payload.exec.method];
+        var method = contract[payload.exec.method];
 
         if (payload.readOnly) {
             method = method.call;
