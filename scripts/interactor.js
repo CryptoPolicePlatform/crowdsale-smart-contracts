@@ -2,6 +2,8 @@ module.exports = function(callback) {
     const payload = JSON.parse(process.argv[process.argv.length - 1]);
     const Contract = artifacts.require(payload.contract.name);
     
+    delete payload.transactionObject.gasPrice;
+
     Contract.defaults(payload.transactionObject);
     
     Contract.at(payload.transactionObject.to).then(contract => {
