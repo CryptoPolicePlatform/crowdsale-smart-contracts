@@ -1,10 +1,10 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.5.2;
 
 contract Balance {
     mapping(address => uint) public balances;
 
     // ERC20 function
-    function balanceOf(address account) public constant returns (uint) {
+    function balanceOf(address account) public view returns (uint) {
         return balances[account];
     }
 

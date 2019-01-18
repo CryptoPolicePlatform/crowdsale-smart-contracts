@@ -1,4 +1,4 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.5.2;
 
 import "../Utils/Ownable.sol";
 
@@ -15,7 +15,7 @@ contract CryptoPoliceAirdrop is Ownable
         proxy = _proxy;
     }
 
-    function bulkTransferEqualAmount(address[] recipients, uint amount) grantOwner public {
+    function bulkTransferEqualAmount(address[] memory recipients, uint amount) grantOwner public {
         for (uint i = 0; i < recipients.length; i++) {
             Proxy(proxy).transferAllowance(recipients[i], amount);
         }

@@ -7,8 +7,9 @@
   },
   "dependencies": {
     "bignumber.js": "^5.0.0",
-    "solc": "^0.4.23",
-    "truffle-contract": "^3.0.4"
+    "bn.js": "^4.11.8",
+    "solc": "^0.5.2",
+    "truffle-contract": "^3.0.7"
   },
   "devDependencies": {
     "bignumber.js": "^5.0.0"

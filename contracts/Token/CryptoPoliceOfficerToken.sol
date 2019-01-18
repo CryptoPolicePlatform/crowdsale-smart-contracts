@@ -1,4 +1,4 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.5.2;
 
 import "./../Utils/Math.sol";
 import "./TotalSupply.sol";
@@ -41,8 +41,8 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
     );
     
     constructor(
-        string tokenName,
-        string tokenSymbol
+        string memory tokenName,
+        string memory tokenSymbol
     )
         public
     {
@@ -61,7 +61,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         whenTransferable(destination)
         hasUnlockedAmount(source, amount)
     {
-        require(destination != address(this) && destination != 0x0);
+        require(destination != address(this) && destination != address(0));
 
         if (amount > 0) {
             balances[source] -= amount;
@@ -118,7 +118,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         address fromAccount,
         address destination
     )
-        public constant returns (uint)
+        public view returns (uint)
     {
         return allowances[fromAccount][destination];
     }
@@ -126,7 +126,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
     function approveAndCall(
         address _spender,
         uint256 _value,
-        bytes _extraData
+        bytes memory _extraData
     )
         public
         returns (bool)
@@ -134,7 +134,7 @@ contract CryptoPoliceOfficerToken is TotalSupply, Balance, Burnable {
         TokenRecipient spender = TokenRecipient(_spender);
 
         if (approve(_spender, _value)) {
-            spender.receiveApproval(msg.sender, _value, this, _extraData);
+            spender.receiveApproval(msg.sender, _value, address(this), _extraData);
             return true;
         }
 

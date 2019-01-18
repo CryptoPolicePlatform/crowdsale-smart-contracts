@@ -1,4 +1,4 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.5.2;
 
 interface CrowdsaleToken {
     function transfer(address destination, uint amount) external returns (bool);

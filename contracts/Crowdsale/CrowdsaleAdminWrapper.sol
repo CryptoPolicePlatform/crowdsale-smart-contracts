@@ -1,4 +1,4 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.5.2;
 
 import "../Utils/Ownable.sol";
 import "./CrowdsaleAdminActions.sol";
@@ -16,7 +16,7 @@ contract CrowdsaleAdminWrapper is Ownable
         actions = CrowdsaleAdminActions(crowdsale);
     }
 
-    function proxyExchange(address beneficiary, uint payment, string description, bytes32 checksum) public grantPriviledged {
+    function proxyExchange(address beneficiary, uint payment, string memory description, bytes32 checksum) public grantPriviledged {
         actions.proxyExchange(beneficiary, payment, description, checksum);
     }
 
@@ -67,8 +67,8 @@ contract CrowdsaleAdminWrapper is Ownable
     function updatePrices(
         uint minSale,
         uint unidentifiedSaleLimit,
-        uint[] exchangeRateTokens,
-        uint[] exchangeRatePrices
+        uint[] memory exchangeRateTokens,
+        uint[] memory exchangeRatePrices
     )
     public grantPriviledged
     {

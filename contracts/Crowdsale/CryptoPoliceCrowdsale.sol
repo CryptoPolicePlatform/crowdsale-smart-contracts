@@ -1,4 +1,4 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.5.2;
 
 import "./CrowdsaleToken.sol";
 import "../Utils/Math.sol";
@@ -104,7 +104,7 @@ contract CryptoPoliceCrowdsale is Ownable {
      * 1) Process payment when crowdsale started by sending tokens in return
      * 2) Issue a refund when crowdsale ended unsuccessfully 
      */
-    function () public payable {
+    function () external payable {
         if (state == CrowdsaleState.Ended) {
             msg.sender.transfer(msg.value);
             refundParticipant(msg.sender);
@@ -157,7 +157,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         return exchangeCalculator(newSalePosition, newPaymentReminder, newProcessedTokenCount);
     }
 
-    function processPayment(address participant, uint payment, bytes32 externalPaymentChecksum) internal {
+    function processPayment(address payable participant, uint payment, bytes32 externalPaymentChecksum) internal {
         require(payment >= minSale, "Payment must be greather or equal to sale minimum");
         require(bannedParticipants[participant] == false, "Participant is banned");
 
@@ -229,7 +229,7 @@ contract CryptoPoliceCrowdsale is Ownable {
      * Intended when other currencies are received and owner has to carry out exchange
      * for those payments aligned to Wei
      */
-    function proxyExchange(address beneficiary, uint payment, string description, bytes32 checksum)
+    function proxyExchange(address payable beneficiary, uint payment, string memory description, bytes32 checksum)
     public grantOwnerOrAdmin
     {
         require(beneficiary != address(0), "Beneficiary not specified");
@@ -280,7 +280,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         }
     }
 
-    function markParticipantIdentifiend(address participant) public grantOwnerOrAdmin notEnded {
+    function markParticipantIdentifiend(address payable participant) public grantOwnerOrAdmin notEnded {
         participants[participant].identified = true;
 
         if (participants[participant].suspendedDirectWeiAmount > 0) {
@@ -304,7 +304,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         participants[participant].identified = false;
     }
 
-    function returnSuspendedPayments(address participant) public grantOwnerOrAdmin {
+    function returnSuspendedPayments(address payable participant) public grantOwnerOrAdmin {
         returnDirectPayments(participant, false, true);
         returnExternalPayments(participant, false, true);
     }
@@ -320,7 +320,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     /**
      * Allow crowdsale participant to get refunded
      */
-    function refundParticipant(address participant) internal {
+    function refundParticipant(address payable participant) internal {
         require(state == CrowdsaleState.Ended);
         require(crowdsaleEndedSuccessfully == false);
         
@@ -328,7 +328,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         returnExternalPayments(participant, true, true);
     }
 
-    function refund(address participant) public grantOwner {
+    function refund(address payable participant) public grantOwner {
         refundParticipant(participant);
     }
 
@@ -362,7 +362,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         bannedParticipants[participant] = false;
     }
 
-    function getExchangeRate(uint threshold) internal view returns (ExchangeRate) {
+    function getExchangeRate(uint threshold) internal view returns (ExchangeRate storage) {
         uint8 idx = exchangeRateIdx(threshold);
 
         ExchangeRate storage rate = exchangeRates[idx];
@@ -417,7 +417,7 @@ contract CryptoPoliceCrowdsale is Ownable {
      * @param processed Whether or not processed payments should be included
      * @param suspended Whether or not suspended payments should be included
      */
-    function returnDirectPayments(address participant, bool processed, bool suspended) internal {
+    function returnDirectPayments(address payable participant, bool processed, bool suspended) internal {
         if (processed && participants[participant].processedDirectWeiAmount > 0) {
             participant.transfer(participants[participant].processedDirectWeiAmount);
             participants[participant].processedDirectWeiAmount = 0;

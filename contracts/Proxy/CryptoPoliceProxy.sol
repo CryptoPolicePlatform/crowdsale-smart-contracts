@@ -1,4 +1,4 @@
-pragma solidity ^0.4.23;
+pragma solidity ^0.5.2;
 
 import "../Utils/Ownable.sol";
 import "../Crowdsale/CrowdsaleToken.sol";
@@ -53,7 +53,7 @@ contract CryptoPoliceProxy is Ownable
     }
 
     modifier grantCrowdsale {
-        require(crowdsale != 0x0, "Crowdsale not set");
+        require(crowdsale != address(0), "Crowdsale not set");
         require(msg.sender == crowdsale, "Sender must be crowdsale");
         _;
     }
