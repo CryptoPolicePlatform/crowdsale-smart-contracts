@@ -1,4 +1,5 @@
-pragma solidity ^0.5.2;
+pragma solidity ^0.5.3;
+pragma experimental ABIEncoderV2;
 
 import "./CrowdsaleToken.sol";
 import "../Utils/Math.sol";
@@ -21,13 +22,20 @@ contract CryptoPoliceCrowdsale is Ownable {
     struct Payment {
         uint weiAmount;
         ExchangeRate rate;
+        bytes32 externalPaymentReference;
     }
 
     struct Participant {
         bool banned;
         bool kycCompliant;
+
         uint exchangedWeiAmount;
+        uint exchangedVirtualWeiAmount;
+
+        uint suspendedWeiAmount;
+
         Payment[] suspendedInternalPayments;
+        Payment[] suspendedExternalPayments;
     }
 
     /**
@@ -43,7 +51,13 @@ contract CryptoPoliceCrowdsale is Ownable {
     /**
      * Signal that payment was successfully processed and tokens are exchanged
      */
-    event PaymentProcessed(address participant, Payment payment, uint tokens, bytes32 paymentReference);
+    event PaymentProcessed(address participant, Payment payment, uint tokens);
+
+    event UnprocessedExternalPaymentReminder(
+        address participant,
+        uint unprocessedAmount,
+        bytes32 externalPaymentReference
+    );
 
     /**
      * Number of how many tokens are assigned for exchange
@@ -63,7 +77,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     /**
      * Minimum number of Wei that can be exchanged for tokens in single transaction
      */
-    uint public minimumProcessableWeiCount = 0.01 ether;
+    uint public minimumProcessableWeiAmount = 0.01 ether;
     
     /**
      * Unprocessed amount of Wei that has been sent to this contract
@@ -109,8 +123,10 @@ contract CryptoPoliceCrowdsale is Ownable {
     bool public suspendNonKycCompliantParticipantPayment = false;
 
     /**
-     * Process payment when crowdsale started by sending tokens in return
-     * Or issue a refund when crowdsale ended unsuccessfully 
+     * Process payment when crowdsale is started by exchanging payment to tokens.
+     * Returns all processed and unprocessed payments back to the participant
+     * when crowdsale has ended and did not succeeded along with payment
+     * that was sent in this transaction (manually issued refund by participant).
      */
     function () external payable {
         if (state == CrowdsaleState.Ended) {
@@ -123,13 +139,17 @@ contract CryptoPoliceCrowdsale is Ownable {
     }
 
     function processPayment(address payable participantAddress,
-        uint payment, ExchangeRate memory rate, bytes32 paymentReference)
-    internal {
-        require(payment >= minimumProcessableWeiCount, "Payment must be greather or equal to sale minimum");
+        uint payment, ExchangeRate memory rate, bytes32 externalPaymentReference)
+    internal whenValidExchangeRate(rate.tokens, rate.price) {
+        require(payment >= minimumProcessableWeiAmount,
+            "Payment must be greather than or equal to the sale minimum");
 
-        Participant memory participant = participants[participantAddress];
+        Participant storage participant = participants[participantAddress];
 
-        require(participant.banned == false, "Participant is banned");
+        require(participant.banned == false,
+            "Cannot process payment because participant is banned");
+
+        bool isInternalPayment = externalPaymentReference == ""; 
 
         // how many round number of exchangeable token portions are left
         uint availablePortions = (HARDCAP - exchangedTokenCount) / rate.tokens;
@@ -140,7 +160,8 @@ contract CryptoPoliceCrowdsale is Ownable {
         uint processedWeiAmount = processablePortions * rate.price;
 
         // calculate how much participant has spent so far
-        uint cumulativeExchangeAmount = participant.exchangedWeiAmount.add(processedWeiAmount);
+        uint cumulativeExchangeAmount = participant.exchangedWeiAmount
+            .add(processedWeiAmount).add(participant.exchangedVirtualWeiAmount);
 
         if ( ! participant.kycCompliant) {
             // check if participant has spent more than limit allows
@@ -149,13 +170,18 @@ contract CryptoPoliceCrowdsale is Ownable {
                 require(suspendNonKycCompliantParticipantPayment,
                     "Participant must carry out KYC");
 
+                Payment[] storage suspendedPayments = isInternalPayment
+                    ? participant.suspendedInternalPayments
+                    : participant.suspendedExternalPayments;
+
                 // suspend payment by tracking payment amount and current exchange rate
-                participant.suspendedInternalPayments.push(Payment({
+                suspendedPayments.push(Payment({
                     weiAmount: payment,
                     rate: ExchangeRate({
                         tokens: rate.tokens,
                         price: rate.price
-                    })
+                    }),
+                    externalPaymentReference: externalPaymentReference
                 }));
 
                 emit PaymentSuspended(participantAddress, Payment({
@@ -163,12 +189,17 @@ contract CryptoPoliceCrowdsale is Ownable {
                     rate: ExchangeRate({
                         tokens: rate.tokens,
                         price: rate.price
-                    })
+                    }),
+                    externalPaymentReference: externalPaymentReference
                 }));
                 
-                // suspended payments are not part of moveable crowdsale funds
-                // track this portion of contract's balance
-                unprocessedBalance = unprocessedBalance.add(payment);
+                if (isInternalPayment) {
+                    // suspended payments are not part of moveable crowdsale funds
+                    // track this portion of contract's balance
+                    unprocessedBalance = unprocessedBalance.add(payment);
+                    participant.suspendedWeiAmount = participant.suspendedWeiAmount
+                        .add(payment);
+                }
 
                 // stop processing this payment
                 return;
@@ -176,16 +207,27 @@ contract CryptoPoliceCrowdsale is Ownable {
         }
 
         // transfer calculated token amount
-        require(token.transfer(participant, processedTokenAmount),
+        require(token.transfer(participantAddress, processedTokenAmount),
             "Failed to transfer tokens to participant");
 
         // increase globaly exchanged token amount
         exchangedTokenCount += processedTokenAmount;
-        participant.exchangedWeiAmount = cumulativeExchangeAmount;
 
-        // return payment reminder
         uint paymentReminder = payment - processedWeiAmount;
-        participant.transfer(paymentReminder);
+
+        if (isInternalPayment) {
+            // return payment reminder
+            participantAddress.transfer(paymentReminder);
+            participant.exchangedWeiAmount += processedWeiAmount;
+        } else {
+            participant.exchangedVirtualWeiAmount += processedWeiAmount;
+
+            emit UnprocessedExternalPaymentReminder(
+                participantAddress,
+                paymentReminder,
+                externalPaymentReference
+            );
+        }
 
         // when there are no round number of exchangeable portions left
         if (requestedPortions > availablePortions) {
@@ -199,28 +241,111 @@ contract CryptoPoliceCrowdsale is Ownable {
                 tokens: rate.tokens,
                 price: rate.price
             }),
-            tokens: processedTokenAmount,
-            paymentReference: paymentReference
-        }));
+            externalPaymentReference: externalPaymentReference
+        }), processedTokenAmount);
     }
 
-    // /**
-    //  * Intended when other currencies are received and owner has to carry out exchange
-    //  * for those payments aligned to Wei
-    //  */
-    // function proxyExchange(address payable beneficiary, uint payment, string memory description, bytes32 checksum)
-    // public grantOwnerOrAdmin whenValidAddress(beneficiary)
-    // {
-    //     require(description == "", "Description not specified");
-    //     require(checksum.length > 0, "Checksum not specified");
-    //     // make sure that payment has not been processed yet
-    //     require(bytes(externalPaymentDescriptions[checksum]).length == 0, "Payment already processed");
+    /**
+     * Process other type of payment methods
+     */
+    function processExternalPayment(address payable participant,
+        uint payment, ExchangeRate memory rate, bytes32 paymentReference)
+    public grantOwnerOrAdmin whenValidAddress(participant) {
+        require(paymentReference.length > 0, "External payment must have payment reference");
+        processPayment(participant, payment, rate, paymentReference);
+    }
 
-    //     processPayment(beneficiary, payment, checksum);
-        
-    //     externalPaymentDescriptions[checksum] = description;
-    //     participantExternalPaymentChecksums[beneficiary].push(checksum);
-    // }
+    function setSuspendNonKycCompliantParticipantPayment(bool suspend) public grantOwner {
+        suspendNonKycCompliantParticipantPayment = suspend;
+    }
+
+    function setParticipantIsNotKycCompliant(address participantAddress)
+    public grantOwnerOrAdmin {
+        participants[participantAddress].kycCompliant = false;
+    }
+
+    function setParticipantIsKycCompliant(address payable participantAddress)
+    public grantOwnerOrAdmin {
+        Participant storage participant = participants[participantAddress];
+        participant.kycCompliant = true;
+
+        if (participant.suspendedInternalPayments.length > 0) {
+            for (uint pidx = 0; pidx < participant.suspendedInternalPayments.length; pidx++) {
+                Payment storage payment = participant.suspendedInternalPayments[pidx];
+                processPayment(
+                    participantAddress,
+                    payment.weiAmount,
+                    payment.rate,
+                    payment.externalPaymentReference);
+            }
+            unprocessedBalance -= participant.suspendedWeiAmount;
+            delete participant.suspendedInternalPayments;
+            participant.suspendedWeiAmount = 0;
+        }
+
+        if (participant.suspendedExternalPayments.length > 0) {
+            for (uint pidx = 0; pidx < participant.suspendedExternalPayments.length; pidx++) {
+                Payment storage payment = participant.suspendedExternalPayments[pidx];
+                processPayment(
+                    participantAddress,
+                    payment.weiAmount,
+                    payment.rate,
+                    payment.externalPaymentReference);
+            }
+            delete participant.suspendedExternalPayments;
+        }
+    }
+
+    function setCumulativePaymentLimitOfNonKycCompliantParticipant(uint weiLimit)
+    public grantOwnerOrAdmin {
+        cumulativePaymentLimitOfNonKycCompliantParticipant = weiLimit;
+    }
+
+    function setMinimumProcessableWeiAmount(uint treshold)
+    public grantOwnerOrAdmin {
+        require(minimumProcessableWeiAmount >= exchangeRate.price,
+            "Minimum sale price cannot be less than price of tokens");
+        minimumProcessableWeiAmount = treshold;
+    }
+
+    function setExchangeRate(uint tokens, uint price)
+    public grantOwnerOrAdmin whenValidExchangeRate(tokens, price) {
+        exchangeRate = ExchangeRate({
+            tokens: tokens,
+            price: price
+        });
+    }
+
+    function setAdmin(address adminAddress)
+    public grantOwner whenValidAddress(adminAddress) {
+        admin = adminAddress;
+    }
+
+    function ban(address participant) public grantOwnerOrAdmin {
+        participants[participant].banned = true;
+    }
+
+    function unban(address participant) public grantOwnerOrAdmin {
+        participants[participant].banned = false;
+    }
+
+    /**
+     * Return all processed and unprocessed payments back to the participant
+     * when crowdsale has ended and did not succeeded.
+     */
+    function refund(address payable participant) public grantOwnerOrAdmin {
+        chargeback(participant);
+    }
+
+    /**
+     * Return suspended payments to the participant in any stage of the crowdsale.
+     * Primary use case is when it is not possible to carry out the KYC process
+     * and suspended funds must be returned to the participant.
+     */
+    function refundSuspended(address payable participant) public grantOwnerOrAdmin {
+        chargebackInternalPayments(participant, false, true);
+        chargebackExternalPayments(participant, false, true);
+    }
 
     /**
      * Command for owner to start crowdsale
@@ -229,7 +354,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         require(state == CrowdsaleState.Pending);
         setAdmin(adminAddress);
         token = CrowdsaleToken(crowdsaleToken);
-        require(token.balanceOf(address(this)) == 510000000e18);
+        require(token.balanceOf(address(this)) == HARDCAP);
         state = CrowdsaleState.Started;
     }
 
@@ -258,65 +383,7 @@ contract CryptoPoliceCrowdsale is Ownable {
             owner.transfer(amount);
         }
     }
-
-    // function markParticipantIdentifiend(address payable participant) public grantOwnerOrAdmin notEnded {
-    //     participants[participant].identified = true;
-
-    //     if (participants[participant].suspendedDirectWeiAmount > 0) {
-    //         processPayment(participant, participants[participant].suspendedDirectWeiAmount, "");
-    //         suspendedInternalPayments = suspendedInternalPayments.sub(participants[participant].suspendedDirectWeiAmount);
-    //         participants[participant].suspendedDirectWeiAmount = 0;
-    //     }
-
-    //     if (participants[participant].suspendedExternalWeiAmount > 0) {
-    //         bytes32[] storage checksums = participantSuspendedExternalPaymentChecksums[participant];
-    //         for (uint i = 0; i < checksums.length; i++) {
-    //             processPayment(participant, suspendedExternalPayments[checksums[i]], checksums[i]);
-    //             suspendedExternalPayments[checksums[i]] = 0;
-    //         }
-    //         participants[participant].suspendedExternalWeiAmount = 0;
-    //         participantSuspendedExternalPaymentChecksums[participant] = new bytes32[](0);
-    //     }
-    // }
-
-    function removeParticipantKycCompliancy(address participant)
-    public grantOwnerOrAdmin whenCrowdsaleNotEnded {
-        participants[participant].kycCompliant = false;
-    }
-
-    function returnsuspendedInternalPayments(address payable participant) public grantOwnerOrAdmin {
-        chargebackInternalPayments(participant, false, true);
-        chargebackExternalPayments(participant, false, true);
-    }
-
-    function setnonKycCompliantParticipantSaleWeiLimit(uint weiLimit)
-    public grantOwnerOrAdmin whenCrowdsaleNotEnded {
-        nonKycCompliantParticipantSaleWeiLimit = weiLimit;
-    }
-
-    function setMinimumProcessableWeiAmount(uint treshold)
-    public grantOwnerOrAdmin {
-        minimumProcessableWeiAmount = treshold;
-    }
-
-    /**
-     * Pay back to the crowdsale participant
-     */
-    function chargeback(address payable participant) internal {
-        require(state == CrowdsaleState.Ended);
-        require(crowdsaleSucceeded == false);
-        
-        chargebackInternalPayments(participant, true, true);
-        chargebackExternalPayments(participant, true, true);
-    }
-
-    /**
-     * Chargeback that is issued by the owner
-     */
-    function refund(address payable participant) public grantOwner {
-        chargeback(participant);
-    }
-
+    
     function burnLeftoverTokens(uint8 percentage) public grantOwner {
         require(state == CrowdsaleState.Ended);
         require(percentage <= 100 && percentage > 0);
@@ -329,25 +396,16 @@ contract CryptoPoliceCrowdsale is Ownable {
         }
     }
 
-    function setExchangeRate(uint tokens, uint price) public grantOwnerOrAdmin {
-        require(tokens > 0 && price > 0);
-
-        exchangeRate = ExchangeRate({
-            tokens: tokens,
-            price: price
-        });
-    }
-
-    function ban(address participant) public grantOwnerOrAdmin {
-        participants[participant].banned = true;
-    }
-
-    function unban(address participant) public grantOwnerOrAdmin {
-        participants[participant].banned = false;
-    }
-
-    function setsuspendNonKycCompliantParticipantPayment(bool suspendable) public grantOwner {
-        suspendNonKycCompliantParticipantPayment = suspendable;
+    /**
+     * Return all processed and unprocessed payments back to the participant
+     * when crowdsale has ended and did not succeeded.
+     */
+    function chargeback(address payable participant) internal {
+        require(state == CrowdsaleState.Ended);
+        require(crowdsaleSucceeded == false);
+        
+        chargebackInternalPayments(participant, true, true);
+        chargebackExternalPayments(participant, true, true);
     }
 
     /**
@@ -357,38 +415,41 @@ contract CryptoPoliceCrowdsale is Ownable {
      * @param processed Whether or not processed payments should be included
      * @param suspended Whether or not suspended payments should be included
      */
-    function chargebackInternalPayments(address payable participant, bool processed, bool suspended) internal {
-        if (processed && participants[participant].processedDirectWeiAmount > 0) {
-            participant.transfer(participants[participant].processedDirectWeiAmount);
-            participants[participant].processedDirectWeiAmount = 0;
+    function chargebackInternalPayments(address payable participantAddress, bool processed, bool suspended)
+    internal {
+        Participant storage participant = participants[participantAddress];
+
+        if (processed && participant.exchangedWeiAmount > 0) {
+            participantAddress.transfer(participant.exchangedWeiAmount);
+            participant.exchangedWeiAmount = 0;
         }
 
-        if (suspended && participants[participant].suspendedDirectWeiAmount > 0) {
-            participant.transfer(participants[participant].suspendedDirectWeiAmount);
-            participants[participant].suspendedDirectWeiAmount = 0;
+        if (suspended && participant.suspendedWeiAmount > 0) {
+            participantAddress.transfer(participant.suspendedWeiAmount);
+            unprocessedBalance -= participant.suspendedWeiAmount;
+            participant.suspendedWeiAmount = 0;
+            delete participant.suspendedInternalPayments;
         }
     }
 
     /**
-     * Signal that externally made payments should be returned back to the participant
+     * Clear locally tracked values regarding extarnal payments
      *
      * @param participant Participant
      * @param processed Whether or not processed payments should be included
      * @param suspended Whether or not suspended payments should be included
      */
-    function chargebackExternalPayments(address participant, bool processed, bool suspended) internal {
-        if (processed && participants[participant].processedExternalWeiAmount > 0) {
-            participants[participant].processedExternalWeiAmount = 0;
+    function chargebackExternalPayments(address participantAddress, bool processed, bool suspended)
+    internal {
+        Participant storage participant = participants[participantAddress];
+
+        if (processed && participant.exchangedVirtualWeiAmount > 0) {
+            participant.exchangedVirtualWeiAmount = 0;
         }
         
-        if (suspended && participants[participant].suspendedExternalWeiAmount > 0) {
-            participants[participant].suspendedExternalWeiAmount = 0;
+        if (suspended && participant.suspendedExternalPayments.length > 0) {
+            delete participant.suspendedExternalPayments;
         }
-    }
-
-    function setAdmin(address adminAddress)
-    public grantOwner whenValidAddress(adminAddress) {
-        admin = adminAddress;
     }
 
     function isAdmin() internal view returns(bool) {
@@ -407,6 +468,14 @@ contract CryptoPoliceCrowdsale is Ownable {
 
     modifier whenValidAddress(address _address) {
         require(_address.notNull(), "Given address cannot be 0");
+        _;
+    }
+
+    modifier whenValidExchangeRate(uint tokens, uint price) {
+        require(tokens > 0, "Exchange rate token amount must be greather than 0");
+        require(price > 0, "Exchange rate token price must be greather than 0");
+        require(minimumProcessableWeiAmount >= price,
+            "Exchange rate token price cannot be greather than minimum sale price");
         _;
     }
 }

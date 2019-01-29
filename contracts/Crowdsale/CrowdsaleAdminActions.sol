@@ -1,4 +1,4 @@
-pragma solidity ^0.5.2;
+pragma solidity ^0.5.3;
 
 interface CrowdsaleAdminActions {
     function proxyExchange(address beneficiary, uint payment, string calldata description, bytes32 checksum) external;

@@ -1,4 +1,4 @@
-pragma solidity ^0.5.2;
+pragma solidity ^0.5.3;
 
 library StringUtils {
     function equals(string memory s1, string memory s2) internal pure returns (bool) {
