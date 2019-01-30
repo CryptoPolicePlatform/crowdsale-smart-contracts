@@ -114,7 +114,7 @@ contract CryptoPoliceCrowdsale is Ownable {
      * Whether thransaction must be reverted on not when participant
      * does not comply with KYC rules
      */
-    bool public suspendNonKycCompliantParticipantPayment = false;
+    bool public suspendNonKycCompliantParticipantPayment = true;
 
     /**
      * Process payment when crowdsale is started by exchanging payment to tokens.
@@ -144,7 +144,8 @@ contract CryptoPoliceCrowdsale is Ownable {
             "Cannot process payment because participant is banned");
 
         bool isInternalPayment = externalPaymentReference == "";
-        (uint processableTokenAmount, uint processableWeiAmount) = calculateExchangeVariables(payment, rate);
+        (uint processableTokenAmount, uint processableWeiAmount, bool lastSale)
+            = calculateExchangeVariables(payment, rate);
 
         if (isPaymentSuspendableBecauseNonKycCompliantParticipant(participant, processableWeiAmount)) {
             // revert transaction if suspending payments are not allowed globally
@@ -202,8 +203,7 @@ contract CryptoPoliceCrowdsale is Ownable {
             participant.exchangedVirtualWeiAmount += processableWeiAmount;
         }
 
-        // when there are no round number of exchangeable token portions left
-        if ((HARDCAP - exchangedTokenCount) < rate.tokens) {
+        if (lastSale) {
             state = CrowdsaleState.SoldOut;
             emit TokensSoldOut();
         }
@@ -219,12 +219,12 @@ contract CryptoPoliceCrowdsale is Ownable {
     }
 
     function calculateExchangeVariables(uint payment, ExchangeRate memory rate)
-    internal view returns (uint processableTokenAmount, uint processableWeiAmount) {
+    internal view returns (uint processableTokenAmount, uint processableWeiAmount, bool lastSale) {
         // how many round number of exchangeable token portions are left
         uint availablePortions = (HARDCAP - exchangedTokenCount) / rate.tokens;
         uint requestedPortions = payment / rate.price;
-        uint processablePortions = requestedPortions > availablePortions
-            ? availablePortions : requestedPortions;
+        lastSale = requestedPortions >= availablePortions;
+        uint processablePortions = lastSale ? availablePortions : requestedPortions;
         processableTokenAmount = processablePortions * rate.tokens;
         processableWeiAmount = processablePortions * rate.price;
     }
@@ -391,6 +391,15 @@ contract CryptoPoliceCrowdsale is Ownable {
             uint amount = balance / (100 / percentage);
             token.burn(amount);
         }
+    }
+
+    /**
+     * Externally called by token contract to determine whether
+     * public token transfers can be enabled.
+     */
+    function isCrowdsaleSuccessful() public view returns(bool)
+    {
+        return state == CrowdsaleState.Ended && crowdsaleSucceeded;
     }
 
     /**

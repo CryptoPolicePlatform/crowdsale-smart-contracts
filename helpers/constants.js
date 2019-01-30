@@ -1,10 +1,4 @@
-const BigNumber = require('bignumber.js');
 const BN = require('bn.js');
-exports.minCap = new BN(new BigNumber("270000000e+18").toString());
-exports.softCap = new BN(new BigNumber("350000000e+18").toString());
-exports.powerCap = new BN(new BigNumber("490000000e+18").toString());
-exports.hardCap = new BN(new BigNumber("510000000e+18").toString());
-exports.minSale = new BN(new BigNumber("1e+16").toString());
-exports.gasPrice = new BN(10000000000);
-exports.unidentifiedSaleLimit = new BN(new BigNumber("1e+18").toString());
-exports.releaseThreshold = new BN(new BigNumber("27000500e+18").toString());
+exports.hardCap = new BN('510000000000000000000000000', 10);
+exports.minSale = new BN('10000000000000000', 10);
+exports.gasPrice = new BN(10000000000, 10);
