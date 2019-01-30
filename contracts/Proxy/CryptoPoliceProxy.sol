@@ -16,11 +16,11 @@ contract CryptoPoliceProxy is Ownable
         token = _token;
     }
 
-    function grantAllowanceProxyAccess(address allowanceOwner) grantOwner public {
+    function grantAllowanceProxyAccess(address allowanceOwner) public grantOwner {
         allowanceProxyAccess[allowanceOwner] = true;
     }
 
-    function denyAllowanceProxyAccess(address allowanceOwner) grantOwner public {
+    function denyAllowanceProxyAccess(address allowanceOwner) public grantOwner {
         allowanceProxyAccess[allowanceOwner] = false;
     }
 
@@ -29,16 +29,16 @@ contract CryptoPoliceProxy is Ownable
         return ERC20Allowance(token).transferFrom(owner, destination, amount);
     }
 
-    function setCrowdsale(address _crowdsale) grantOwner public {
+    function setCrowdsale(address _crowdsale) public grantOwner {
         crowdsale = _crowdsale;
     }
 
-    function transfer(address destination, uint amount) grantCrowdsale public returns (bool)
+    function transfer(address destination, uint amount) public grantCrowdsale returns (bool)
     {
         return CrowdsaleToken(token).transfer(destination, amount);
     }
 
-    function balanceOf(address account) grantCrowdsale public view returns (uint)
+    function balanceOf(address account) public grantCrowdsale view returns (uint)
     {
         if (account == crowdsale) {
             return CrowdsaleToken(token).balanceOf(address(this));
@@ -47,7 +47,7 @@ contract CryptoPoliceProxy is Ownable
         }
     }
 
-    function burn(uint amount) grantCrowdsale public
+    function burn(uint amount) public grantCrowdsale
     {
         CrowdsaleToken(token).burn(amount);
     }
