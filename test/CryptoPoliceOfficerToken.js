@@ -6,7 +6,7 @@ contract('CryptoPoliceOfficerToken', function(accounts) {
         return CryptoPoliceOfficerToken.deployed().then(function (token) {
             return token.transfer(accounts[1], 1337).then(function() {
                 return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
-                    Assert.equal(tokenCount.toString(), "1337");
+                    Assert.equal(tokenCount.toString(10), "1337");
                 })
             })
         });

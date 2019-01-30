@@ -14,9 +14,9 @@ contract('CryptoPoliceAirdrop', function(accounts) {
                                 var recipients = [accounts[1], accounts[2]];
                                 return airdrop.bulkTransferEqualAmount(recipients, 2).then(function () {
                                     return token.balanceOf.call(recipients[0]).then(function(tokenCount) {
-                                        Assert.equal(tokenCount.toString(), "2");
+                                        Assert.equal(tokenCount.toString(10), "2");
                                         return token.balanceOf.call(recipients[1]).then(function(tokenCount) {
-                                            Assert.equal(tokenCount.toString(), "2");
+                                            Assert.equal(tokenCount.toString(10), "2");
                                         });
                                     });
                                 });
