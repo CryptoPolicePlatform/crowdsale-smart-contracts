@@ -51,7 +51,7 @@ contract CryptoPoliceCrowdsale is Ownable {
     /**
      * Signal that payment was successfully processed and tokens are exchanged
      */
-    event PaymentProcessed(address participant, Payment payment, uint tokens, uint paymentReminder);
+    event PaymentProcessed(address participant, Payment payment, uint tokens, uint unprocessablePaymentReminder);
 
     /**
      * Total number of tokens assigned for crowdsale
@@ -192,11 +192,11 @@ contract CryptoPoliceCrowdsale is Ownable {
         // increase globaly exchanged token amount
         exchangedTokenCount += processableTokenAmount;
 
-        uint paymentReminder = payment - processableWeiAmount;
+        uint paymentRemainder = payment - processableWeiAmount;
 
         if (isInternalPayment) {
-            // return payment reminder
-            participantAddress.transfer(paymentReminder);
+            // return payment remainder
+            participantAddress.transfer(paymentRemainder);
             participant.exchangedWeiAmount += processableWeiAmount;
         } else {
             participant.exchangedVirtualWeiAmount += processableWeiAmount;
@@ -215,7 +215,7 @@ contract CryptoPoliceCrowdsale is Ownable {
                 price: rate.price
             }),
             externalPaymentReference: externalPaymentReference
-        }), processableTokenAmount, paymentReminder);
+        }), processableTokenAmount, paymentRemainder);
     }
 
     function calculateExchangeVariables(uint payment, ExchangeRate memory rate)
