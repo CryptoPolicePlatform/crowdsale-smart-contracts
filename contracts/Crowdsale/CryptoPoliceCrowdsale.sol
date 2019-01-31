@@ -203,11 +203,6 @@ contract CryptoPoliceCrowdsale is Ownable {
             participant.exchangedVirtualWeiAmount += processableWeiAmount;
         }
 
-        if (lastSale) {
-            state = CrowdsaleState.SoldOut;
-            emit TokensSoldOut();
-        }
-
         emit PaymentProcessed(participantAddress, Payment({
             weiAmount: payment,
             rate: ExchangeRate({
@@ -216,6 +211,11 @@ contract CryptoPoliceCrowdsale is Ownable {
             }),
             externalPaymentReference: externalPaymentReference
         }), processableTokenAmount, paymentRemainder);
+
+        if (lastSale) {
+            state = CrowdsaleState.SoldOut;
+            emit TokensSoldOut();
+        }
     }
 
     function calculateExchangeVariables(uint payment, ExchangeRate memory rate)

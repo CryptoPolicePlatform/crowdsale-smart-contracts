@@ -6,9 +6,7 @@ const CryptoPoliceOfficerToken = artifacts.require("CryptoPoliceOfficerToken");
 const Assert = require('assert');
 const constants = require('./../helpers/constants');
 const BN = require('bn.js');
-const revertCallback = function(error) {
-    Assert.ok(error.message.includes('revert'));
-};
+const whenReverted = /VM Exception while processing transaction: revert/
 const getBalance = account => web3.eth.getBalance(account).then(balance => new BN(balance));
 const getTxCost = tx => new BN(constants.gasPrice * tx.receipt.gasUsed);
 
@@ -28,9 +26,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     describe("Before crowdsale is started", function () {
         it("Payment is rejected", function () {
             return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-                return crowdsale.send(web3.utils.toWei("1", "ether")).then(function() {
-                    Assert.fail("Payment should have not been accepted");
-                }).catch(revertCallback)
+                Assert.rejects(crowdsale.send(web3.utils.toWei("1", "ether")), whenReverted)
             })
         });
         it("Admin can start crowdsale", startCrowdsale);
@@ -38,9 +34,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     describe("After crowdsale is started", function () {
         it("Reject payment when exchange rate is not set", function () {
             return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-                return crowdsale.send(web3.utils.toWei("0.01", "ether")).then(function() {
-                    Assert.fail("Payment should have not been accepted");
-                }).catch(revertCallback)
+                Assert.rejects(crowdsale.send(web3.utils.toWei("0.01", "ether")), whenReverted)
             })
         });
         it("Admin can update exchange rate", function() {
@@ -50,9 +44,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         });
         it("Payment less that minimum sale is rejected", function() {
             return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-                return crowdsale.send(web3.utils.toWei("0.009", "ether")).then(function() {
-                    Assert.fail("Payment should have not been accepted");
-                }).catch(revertCallback)
+                Assert.rejects(crowdsale.send(web3.utils.toWei("0.009", "ether")), whenReverted)
             })
         });
         it("Payment will yield correct number of tokens in return", function() {
@@ -83,13 +75,13 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         describe("Before public token transfer is enabled", function() {
             it("Token transfer is rejected", function() {
                 return CryptoPoliceOfficerToken.deployed().then(function(token) {
-                    return token.transfer(accounts[2], 1, { from: accounts[1] }).catch(revertCallback)
+                    Assert.rejects(token.transfer(accounts[2], 1, { from: accounts[1] }), whenReverted)
                 })
             });
             it("Token transfer via allowance is rejected", function() {
                 return CryptoPoliceOfficerToken.deployed().then(function(token) {
                     return token.approve(accounts[2], 1, { from: accounts[1] }).then(function() {
-                        return token.transferFrom(accounts[1], accounts[3], 1, { from: accounts[2] }).catch(revertCallback);
+                        Assert.rejects(token.transferFrom(accounts[1], accounts[3], 1, { from: accounts[2] }), whenReverted);
                     })
                 })
             });
@@ -113,7 +105,7 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         describe("After token transfer is enabled", function() {
             it("Owner cannot transfer locked tokens", function() {
                 return CryptoPoliceOfficerToken.deployed().then(function(token) {
-                    return token.transfer(accounts[1], 1).catch(revertCallback)
+                    Assert.rejects(token.transfer(accounts[1], 1), whenReverted)
                 })
             });
             it("Owner releases locked tokens", function() {
@@ -186,12 +178,12 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     });
     it("Payment is rejected after crowdsale is ended", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.sendTransaction({
+            Assert.rejects(crowdsale.sendTransaction({
                 from: accounts[2],
                 value: constants.minSale
             }).then(function() {
                 Assert.ok(false, "Transaction was not rejected");
-            }).catch(revertCallback);
+            }), whenReverted);
         })
     });
 });
@@ -203,13 +195,14 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                 return crowdsale.sendTransaction({
                     from: accounts[1],
                     value: constants.minSale
-                }).then(function() {
-                    return crowdsale.sendTransaction({
+                }).then(tx => {
+                    Assert.ok(tx.logs.length)
+                    const event = tx.logs[1];
+                    Assert.equal(event.event, "TokensSoldOut");
+                    Assert.rejects(crowdsale.sendTransaction({
                         from: accounts[1],
                         value: constants.minSale
-                    }).then(function() {
-                        Assert.ok(false, "Transaction was not rejected");
-                    }).catch(revertCallback)
+                    }), /Crowdsale currently inactive/)
                 })
             })
         })
@@ -324,10 +317,10 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
             return crowdsale.setExchangeRate(1, constants.minSale).then(function() {
                 return crowdsale.pauseCrowdsale().then(function() {
-                    return crowdsale.sendTransaction({
+                    Assert.rejects(crowdsale.sendTransaction({
                         from: accounts[1],
                         value: constants.minSale
-                    }).catch(revertCallback)
+                    }), whenReverted)
                 })
             })
         });
@@ -337,10 +330,21 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
     it("External payment", function() {
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-            return crowdsale.processExternalPayment(accounts[1], constants.minSale, [1, constants.minSale], web3.utils.utf8ToHex("checksum")).then(function() {
+            const reference = "checksum";
+            return crowdsale.processExternalPayment(accounts[1], constants.minSale, [1, constants.minSale], web3.utils.utf8ToHex(reference)).then(function(tx) {
                 return CryptoPoliceOfficerToken.deployed().then(function(token) {
                     return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
                         Assert.equal(tokenCount.toString(10), "1");
+                        Assert.ok(tx.logs.length)
+                        const event = tx.logs[0];
+                        Assert.equal(event.event, "PaymentProcessed");
+                        Assert.equal(event.args.participant, accounts[1])
+                        Assert.equal(event.args.payment.weiAmount, constants.minSale.toString(10))
+                        Assert.equal(event.args.payment.rate.tokens, "1")
+                        Assert.equal(event.args.payment.rate.price, constants.minSale.toString(10))
+                        Assert.equal(web3.utils.hexToUtf8(event.args.payment.externalPaymentReference), reference)
+                        Assert.equal(event.args.tokens.toString(10), "1")
+                        Assert.equal(event.args.unprocessablePaymentReminder.toString(10), "0")
                     })
                 })
             })
@@ -403,9 +407,13 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
     it("Participant's balance unchanged after external payment has payment remainder", function() {
         return CryptoPoliceCrowdsale.deployed().then(crowdsale => {
             return getBalance(accounts[1]).then(balanceBefore => {
-                return crowdsale.processExternalPayment(accounts[1], constants.minSale.add(new BN(1)), [1, constants.minSale], web3.utils.utf8ToHex("checksum"), { gasPrice: constants.gasPrice }).then(function() {
+                return crowdsale.processExternalPayment(accounts[1], constants.minSale.add(new BN(1)), [1, constants.minSale], web3.utils.utf8ToHex("checksum")).then(tx => {
                     return getBalance(accounts[1]).then(balanceAfter => {
                         Assert.equal(balanceAfter.toString(), balanceBefore.toString())
+                        Assert.ok(tx.logs.length)
+                        const event = tx.logs[0];
+                        Assert.equal(event.event, "PaymentProcessed");
+                        Assert.equal(event.args.unprocessablePaymentReminder.toString(10), "1")
                     })
                 })
             })
@@ -455,10 +463,10 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
                         }).then(() => {
                             return crowdsale.setParticipantIsNotKycCompliant(accounts[1]).then(() => {
                                 return crowdsale.setSuspendNonKycCompliantParticipantPayment(false).then(() => {
-                                    return crowdsale.sendTransaction({
+                                    Assert.rejects(crowdsale.sendTransaction({
                                         from: accounts[1],
                                         value: constants.minSale
-                                    }).catch(revertCallback)
+                                    }), whenReverted)
                                 })
                             })
                         })
@@ -501,7 +509,16 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         before(startCrowdsale);
         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
             return crowdsale.setCumulativePaymentLimitOfNonKycCompliantParticipant(constants.minSale.sub(new BN(1))).then(() => {
-                return crowdsale.processExternalPayment(accounts[1], constants.minSale, [1, constants.minSale], web3.utils.utf8ToHex("checksum")).then(function() {
+                const reference = "checksum";
+                return crowdsale.processExternalPayment(accounts[1], constants.minSale, [1, constants.minSale], web3.utils.utf8ToHex(reference)).then(function(tx) {
+                    Assert.ok(tx.logs.length)
+                    const event = tx.logs[0];
+                    Assert.equal(event.event, "PaymentSuspended");
+                    Assert.equal(event.args.participant, accounts[1])
+                    Assert.equal(event.args.payment.weiAmount, constants.minSale.toString(10))
+                    Assert.equal(event.args.payment.rate.tokens, "1")
+                    Assert.equal(event.args.payment.rate.price, constants.minSale.toString(10))
+                    Assert.equal(web3.utils.hexToUtf8(event.args.payment.externalPaymentReference), reference)
                     return CryptoPoliceOfficerToken.deployed().then(function(token) {
                         return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
                             Assert.equal(tokenCount.toString(10), "0");
