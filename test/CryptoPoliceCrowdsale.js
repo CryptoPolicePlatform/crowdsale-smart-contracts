@@ -333,22 +333,20 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         });
     })
 });
-// contract('CryptoPoliceCrowdsale', function(accounts) {
-//     before(startCrowdsale);
-//     it("External payment", function() {
-//         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-//             return crowdsale.setExchangeRate(1, constants.minSale).then(function() {
-//                 return crowdsale.proxyExchange(accounts[1], constants.minSale, web3.utils.utf8ToHex("checksum")).then(function() {
-//                     return CryptoPoliceOfficerToken.deployed().then(function(token) {
-//                         return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
-//                             Assert.equal(constants.minCap.toString(), tokenCount.toString());
-//                         })
-//                     })
-//                 })
-//             })
-//         })
-//     });
-// });
+contract('CryptoPoliceCrowdsale', function(accounts) {
+    before(startCrowdsale);
+    it("External payment", function() {
+        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+            return crowdsale.processExternalPayment(accounts[1], constants.minSale, [1, constants.minSale], web3.utils.utf8ToHex("checksum")).then(function() {
+                return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                    return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
+                        Assert.equal(tokenCount.toString(10), "1");
+                    })
+                })
+            })
+        })
+    });
+});
 contract('CryptoPoliceCrowdsale', function(accounts) {
     before(function() {
         return startCrowdsale().then(function() {
@@ -400,31 +398,20 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         })
     })
 });
-// contract('CryptoPoliceCrowdsale', function(accounts) {
-//     before(startCrowdsale);
-//     it("Balance not changed when proxy exchange has reminder", function() {
-//         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-//             return crowdsale.setExchangeRate(0, 1, constants.minSale).then(function() {
-//                 // add eth to contract's balance
-//                 return crowdsale.sendTransaction({
-//                     from: accounts[1],
-//                     value: constants.minSale
-//                 }).then(function () {
-//                     return web3.eth.getBalance(accounts[2]).then(balance => {
-//                         const balanceBefore = new BN(balance);
-//                         return crowdsale.proxyExchange(accounts[2], constants.minSale.add(new BN(1)), "r", web3.utils.utf8ToHex("c"))
-//                             .then(function() {
-//                                 return web3.eth.getBalance(accounts[2]).then(balance => {
-//                                     const balanceAfter = new BN(balance);
-//                                     Assert.equal(balanceBefore.toString(), balanceAfter.toString());
-//                                 })
-//                             })
-//                     })
-//                 })
-//             })
-//         })
-//     })
-// });
+contract('CryptoPoliceCrowdsale', function(accounts) {
+    before(startCrowdsale);
+    it("Participant's balance unchanged after external payment has payment remainder", function() {
+        return CryptoPoliceCrowdsale.deployed().then(crowdsale => {
+            return getBalance(accounts[1]).then(balanceBefore => {
+                return crowdsale.processExternalPayment(accounts[1], constants.minSale.add(new BN(1)), [1, constants.minSale], web3.utils.utf8ToHex("checksum"), { gasPrice: constants.gasPrice }).then(function() {
+                    return getBalance(accounts[1]).then(balanceAfter => {
+                        Assert.equal(balanceAfter.toString(), balanceBefore.toString())
+                    })
+                })
+            })
+        })
+    })
+});
 contract('CryptoPoliceCrowdsale', function(accounts) {
     before(startCrowdsale);
     it("Suspended payment is not transfered to owner when crowdsale ended", function() {
@@ -508,27 +495,25 @@ contract('CryptoPoliceCrowdsale', accounts => {
     })
 })
 
-// contract('CryptoPoliceCrowdsale', function(accounts) {
-//     before(startCrowdsale);
-//     it("Multiple suspended external payments are processed when participant identified", function() {
-//         return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
-//             return crowdsale.setExchangeRate(0, 1, 1).then(function() {
-//                 return crowdsale.updateUnidentifiedSaleLimit(1).then(function() {
-//                     return crowdsale.updateMinSale(1).then(function () {
-//                         return crowdsale.proxyExchange(accounts[1], 2, "reference", web3.utils.utf8ToHex("checksum")).then(function() {
-//                             return crowdsale.proxyExchange(accounts[1], 2, "reference1", web3.utils.utf8ToHex("checksum1")).then(function() {
-//                                 return crowdsale.markParticipantIdentifiend(accounts[1]).then(function() {
-//                                     return CryptoPoliceOfficerToken.deployed().then(function(token) {
-//                                         return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
-//                                             Assert.equal(tokenCount.toString(), "4");
-//                                         })
-//                                     })
-//                                 })
-//                             })
-//                         })
-//                     })
-//                 })
-//             })
-//         })
-//     });
-// });
+contract('CryptoPoliceCrowdsale', function(accounts) {
+    before(startCrowdsale);
+    it("Suspended external payment is processed after participant is set as KYC compliant", function() {
+        before(startCrowdsale);
+        return CryptoPoliceCrowdsale.deployed().then(function(crowdsale) {
+            return crowdsale.setCumulativePaymentLimitOfNonKycCompliantParticipant(constants.minSale.sub(new BN(1))).then(() => {
+                return crowdsale.processExternalPayment(accounts[1], constants.minSale, [1, constants.minSale], web3.utils.utf8ToHex("checksum")).then(function() {
+                    return CryptoPoliceOfficerToken.deployed().then(function(token) {
+                        return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
+                            Assert.equal(tokenCount.toString(10), "0");
+                            return crowdsale.setParticipantIsKycCompliant(accounts[1]).then(function() {
+                                return token.balanceOf.call(accounts[1]).then(function(tokenCount) {
+                                    Assert.equal(tokenCount.toString(10), "1");
+                                })
+                            })
+                        })
+                    })
+                })
+            })
+        })
+    });
+});
