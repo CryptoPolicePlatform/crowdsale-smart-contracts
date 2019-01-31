@@ -481,6 +481,33 @@ contract('CryptoPoliceCrowdsale', function(accounts) {
         })
     })
 });
+
+contract('CryptoPoliceCrowdsale', accounts => {
+    before(startCrowdsale);
+    it("Ban and unban", () => {
+        return CryptoPoliceCrowdsale.deployed().then(crowdsale => {
+            return crowdsale.setExchangeRate(1, constants.minSale).then(() => {
+                return crowdsale.ban(accounts[1]).then(() => {
+                    return crowdsale.sendTransaction({
+                        from: accounts[1],
+                        value: constants.minSale
+                    }).then(() => {
+                        Assert.fail("Banned participant transaction should have been rejected")
+                    }).catch(error => {
+                        Assert.ok(error.message.includes("banned"))
+                        return crowdsale.unban(accounts[1]).then(() => {
+                            return crowdsale.sendTransaction({
+                                from: accounts[1],
+                                value: constants.minSale
+                            })
+                        })
+                    })
+                })
+            })
+        })
+    })
+})
+
 // contract('CryptoPoliceCrowdsale', function(accounts) {
 //     before(startCrowdsale);
 //     it("Multiple suspended external payments are processed when participant identified", function() {
