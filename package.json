@@ -16,5 +16,13 @@
   },
   "author": "",
   "license": "ISC",
-  "homepage": "https://bitbucket.org/cunamiweb/ico-contracts#readme"
+  "homepage": "https://bitbucket.org/cunamiweb/ico-contracts#readme",
+  "scripts": {
+    "token-data": "node scripts/token-bytecode.js generator",
+    "proxy-data": "node scripts/proxy-bytecode.js generator",
+    "crowdsale-data": "node scripts/crowdsale-bytecode.js generator",
+    "token-flattener": "truffle-flattener contracts/Token/CryptoPoliceOfficerToken.sol > generator/CryptoPoliceOfficerToken.flat.txt",
+    "proxy-flattener": "truffle-flattener contracts/Proxy/CryptoPoliceProxy.sol > generator/CryptoPoliceProxy.flat.txt",
+    "crowdsale-flattener": "truffle-flattener contracts/Crowdsale/CryptoPoliceCrowdsale.sol > generator/CryptoPoliceCrowdsale.flat.txt"
+  }
 }

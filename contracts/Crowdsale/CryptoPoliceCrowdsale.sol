@@ -136,7 +136,7 @@ contract CryptoPoliceCrowdsale is Ownable {
         uint payment, ExchangeRate memory rate, bytes32 externalPaymentReference)
     internal whenValidExchangeRate(rate.tokens, rate.price) {
         require(payment >= minimumProcessableWeiAmount,
-            "Payment must be greather than or equal to the sale minimum");
+            "Payment must be greater than or equal to the sale minimum");
 
         Participant storage participant = participants[participantAddress];
 
@@ -478,10 +478,10 @@ contract CryptoPoliceCrowdsale is Ownable {
     }
 
     modifier whenValidExchangeRate(uint tokens, uint price) {
-        require(tokens > 0, "Exchange rate token amount must be greather than 0");
-        require(price > 0, "Exchange rate token price must be greather than 0");
+        require(tokens > 0, "Exchange rate token amount must be greater than 0");
+        require(price > 0, "Exchange rate token price must be greater than 0");
         require(minimumProcessableWeiAmount >= price,
-            "Exchange rate token price cannot be greather than minimum sale price");
+            "Exchange rate token price cannot be greater than minimum sale price");
         _;
     }
 }

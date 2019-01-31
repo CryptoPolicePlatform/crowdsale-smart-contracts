@@ -3,3 +3,4 @@ bin
 .vscode
 build
 node_modules
+generator
